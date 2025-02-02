@@ -100,6 +100,19 @@ Additional user instructions:
   "#
 }
 
+function GenerateMusic_HyperbolicDeepseekReasoner(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "HyperbolicDeepseekReasoner"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
 function GenerateMusic_DeepseekReasoner(theme: string, prompt: string) -> RoundedBinaryPiece {
   client "DeepseekReasoner"
   prompt #"
@@ -126,10 +139,91 @@ Additional user instructions:
   "#
 }
 
-test waltz_theme {
-  functions [GenerateMusic_OpenAIo1]
-    args {
-    theme "Write the village theme for a SNES game."
+function GenerateMusic_AnthropicOpus(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "AnthropicOpus"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_AnthropicHaiku(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "AnthropicHaiku"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_Gemini15Flash(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "Gemini15Flash"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_Gemini15Pro(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "Gemini15Pro"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_Gemini20FlashExp(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "Gemini20FlashExp"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_Gemini20FlashThinkingExp(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "Gemini20FlashThinkingExp"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+
+test TestName {
+  functions [GenerateMusic_DeepseekReasoner]
+  args {
+    theme #"
+      Write a waltz in A Minor
+    "#
     prompt #"
 # Music Composition Instructions
 
@@ -139,14 +233,12 @@ You are an expert composer well-versed in music theory.
 Compose a short piece in rounded binary form (A, B, A'). Each section (A, B, A') can be further subdivided into one or more subsections (A1, A2, etc.).
 
 ## Voices
-Each subsection must contain a minimum of two phrases, and each phrase can have up to 6 voices:
-
+Each subsection must contain a minimum of two phrases, and each phrase can have up to 5 voices:
 - bass
 - tenor 
 - alto
 - soprano
 - piano
-- percussion
 
 ## Instruments
 Choose an appropriate MIDI instrument for each of the four voices:
@@ -155,14 +247,11 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - alto 
 - soprano
 
-The percussion voice is always on MIDI channel 10.
-
 *Note: The piano voice is always instrument 0 (Acoustic Grand).*
 
 ## Composition Guidelines
 - Use varied rhythms for each part
 - Keep each part coherent, with independent but harmonically compatible lines
-
 - Use good voice leading between the parts, avoid parallel fifths and octaves
 - Write interesting motifs and follow the rules of Western tonality and music theory
 - Ensure there is a lot of variety between the phrases
@@ -177,7 +266,7 @@ The percussion voice is always on MIDI channel 10.
 - End each phrase with an interesting cadence or a long note
 - The final A' must restate A's theme
 - **EXTREMELY IMPORTANT**: Make sure there is a variety of rhythms and counterpoint among the various voices. Limit the amount of unison rhythms.
-- Use the piano to help keep the beat and add percussive interest, for example, by arpeggiating the chords"#
-
+- Use the piano to help keep the beat and add percussive interest, for example, by arpeggiating the chords
+    "#
   }
 }

@@ -47,6 +47,52 @@ class BamlSyncClient:
       return self.__stream_client
 
     
+    def GenerateMusic_AnthropicHaiku(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_AnthropicHaiku",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_AnthropicOpus(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_AnthropicOpus",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
     def GenerateMusic_AnthropicSonnet(
         self,
         theme: str,prompt: str,
@@ -84,6 +130,121 @@ class BamlSyncClient:
 
       raw = self.__runtime.call_function_sync(
         "GenerateMusic_DeepseekReasoner",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_Gemini15Flash(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_Gemini15Flash",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_Gemini15Pro(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_Gemini15Pro",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_Gemini20FlashExp(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_Gemini20FlashExp",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_Gemini20FlashThinkingExp(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_Gemini20FlashThinkingExp",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
+    def GenerateMusic_HyperbolicDeepseekReasoner(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.call_function_sync(
+        "GenerateMusic_HyperbolicDeepseekReasoner",
         {
           "theme": theme,"prompt": prompt,
         },
@@ -197,6 +358,68 @@ class BamlStreamClient:
       self.__ctx_manager = ctx_manager
 
     
+    def GenerateMusic_AnthropicHaiku(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_AnthropicHaiku",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_AnthropicOpus(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_AnthropicOpus",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
     def GenerateMusic_AnthropicSonnet(
         self,
         theme: str,prompt: str,
@@ -242,6 +465,161 @@ class BamlStreamClient:
 
       raw = self.__runtime.stream_function_sync(
         "GenerateMusic_DeepseekReasoner",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_Gemini15Flash(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_Gemini15Flash",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_Gemini15Pro(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_Gemini15Pro",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_Gemini20FlashExp(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_Gemini20FlashExp",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_Gemini20FlashThinkingExp(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_Gemini20FlashThinkingExp",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_HyperbolicDeepseekReasoner(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function_sync(
+        "GenerateMusic_HyperbolicDeepseekReasoner",
         {
           "theme": theme,
           "prompt": prompt,

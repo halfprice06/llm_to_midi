@@ -47,13 +47,25 @@ client<llm> OpenAIGPT4o {
 }
 
 
-client<llm> DeepseekReasoner {
+client<llm> HyperbolicDeepseekReasoner {
   provider openai-generic
   options {
     model deepseek-ai/DeepSeek-R1
-    api_key env.DEEPSEEK_API_KEY
+    api_key env.HYPERBOLIC_DEEPSEEK_API_KEY
     base_url "https://api.hyperbolic.xyz/v1/"
     default_role "user"
+    temperature 1
+
+  }
+}
+
+
+client<llm> DeepseekReasoner {
+  provider openai-generic
+  options {
+    model deepseek-reasoner
+    api_key env.DEEPSEEK_API_KEY
+    base_url "https://api.deepseek.com"
     temperature 1
 
   }
@@ -69,6 +81,63 @@ client<llm> AnthropicSonnet {
   }
 
 }
+
+client<llm> AnthropicOpus {
+  provider anthropic
+  options {
+    model "claude-3-opus-latest"
+    api_key env.ANTHROPIC_API_KEY
+    temperature 1
+  }
+}
+
+client<llm> AnthropicHaiku {
+  provider anthropic
+  options {
+    model "claude-3-5-haiku-latest"
+    api_key env.ANTHROPIC_API_KEY
+    temperature 1
+  }
+}
+
+client<llm> Gemini15Flash {
+  provider google-ai
+  options {
+    model "gemini-1.5-flash"
+    api_key env.GOOGLE_API_KEY
+  }
+}
+
+
+client<llm> Gemini15Pro {
+  provider google-ai
+  options {
+    model "gemini-1.5-pro"
+    api_key env.GOOGLE_API_KEY
+  }
+}
+
+
+client<llm> Gemini20FlashExp {
+  provider google-ai
+  options {
+    model "gemini-2.0-flash-exp"
+    api_key env.GOOGLE_API_KEY
+  }
+}
+
+
+client<llm> Gemini20FlashThinkingExp {
+  provider google-ai
+  options {
+    model "gemini-2.0-flash-thinking-exp-01-21"
+    api_key env.GOOGLE_API_KEY
+  }
+
+}
+
+
+
 
 
 // https://docs.boundaryml.com/docs/snippets/clients/retry
