@@ -44,6 +44,7 @@ class Phrase(BaseModel):
     alto: List[NoteDuration]
     soprano: List[NoteDuration]
     piano: List[NoteDuration]
+    percussion: List[NoteDuration]
 
 class Section(BaseModel):
     section_label: str                # e.g., "A1", "B1", etc.
@@ -81,7 +82,8 @@ print("Data models for Rounded Binary Form (5 voices + instrumentation) defined 
 async def generate_with_openai_o1(theme: str) -> Tuple[RoundedBinaryPiece, str]:
     """Generate melody using OpenAI O1 model"""
     try:
-        result = await async_b.GenerateMusic_OpenAIo1(theme=theme, prompt=MUSIC_PROMPT)
+        stream = async_b.stream.GenerateMusic_OpenAIo1(theme=theme, prompt=MUSIC_PROMPT)
+        result = await stream.get_final_response()
         return result, json.dumps(result.dict(), indent=2)
     except Exception as e:
         print(f"Error with OpenAI O1: {e}")
@@ -198,19 +200,18 @@ async def generate_with_gemini_20_flash_thinking_exp(theme: str) -> Tuple[Rounde
 
 # Map model names to their generation functions
 MODEL_GENERATORS = {
-    # "o1": generate_with_openai_o1,
-    # "o1-mini": generate_with_openai_o1_mini,
-    # "o3-mini": generate_with_openai_o3_mini,
-    # "gpt4o": generate_with_openai_gpt4o,
-    # "sonnet": generate_with_anthropic_sonnet,
-    # "deepseek": generate_with_deepseek_reasoner,
+    "o1": generate_with_openai_o1,
+    "o1-mini": generate_with_openai_o1_mini,
+    "o3-mini": generate_with_openai_o3_mini,
+    "gpt4o": generate_with_openai_gpt4o,
+    "sonnet": generate_with_anthropic_sonnet,
     "hyperbolic-deepseek": generate_with_hyperbolic_deepseek_reasoner,
-    # "opus": generate_with_anthropic_opus,
-    # "haiku": generate_with_anthropic_haiku,
-    # "gemini-15-flash": generate_with_gemini_15_flash,
-    # "gemini-15-pro": generate_with_gemini_15_pro,
-    # "gemini-20-flash": generate_with_gemini_20_flash_exp,
-    # "gemini-20-flash-thinking": generate_with_gemini_20_flash_thinking_exp
+    "opus": generate_with_anthropic_opus,
+    "haiku": generate_with_anthropic_haiku,
+    "gemini-15-flash": generate_with_gemini_15_flash,
+    "gemini-15-pro": generate_with_gemini_15_pro,
+    "gemini-20-flash": generate_with_gemini_20_flash_exp,
+    "gemini-20-flash-thinking": generate_with_gemini_20_flash_thinking_exp
 }
 
 # The base prompt used for all models
@@ -223,12 +224,13 @@ You are an expert composer well-versed in music theory.
 Compose a short piece in rounded binary form (A, B, A'). Each section (A, B, A') can be further subdivided into one or more subsections (A1, A2, etc.).
 
 ## Voices
-Each subsection must contain a minimum of two phrases, and each phrase can have up to 5 voices:
+Each subsection must contain a minimum of two phrases, and each phrase must have all 6 voices:
 - bass
 - tenor 
 - alto
 - soprano
 - piano
+- percussion (channel 10)
 
 ## Instruments
 Choose an appropriate MIDI instrument for each of the four voices:
@@ -238,6 +240,7 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - soprano
 
 *Note: The piano voice is always instrument 0 (Acoustic Grand).*
+*Note: The percussion track uses General MIDI drum map note numbers on channel 10.*
 
 ## Composition Guidelines
 - Use varied rhythms for each part
@@ -247,16 +250,22 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - Ensure there is a lot of variety between the phrases
 - The final A' must restate A's theme
 - Parts may rest at times to give other parts a chance to shine and listeners a chance to catch their breath
+- Use the percussion track to provide rhythmic foundation and interest
 
 ## Technical Reminders
 - Each section must contain a minimum of two phrases
 - Make phrases extremely long and interesting
-- "note" is a MIDI note number (60=middle C) or null for rest
+- "note" is a MIDI note number:
+  - For melodic parts (60=middle C)
+  - For percussion (35=acoustic bass drum, 38=acoustic snare, 42=closed hi-hat, etc.)
+  - null indicates a rest
 - "duration" is in beats (1.0=quarter, 0.5=eighth, etc.)
 - End each phrase with an interesting cadence or a long note
 - The final A' must restate A's theme
 - **EXTREMELY IMPORTANT**: Make sure there is a variety of rhythms and counterpoint among the various voices. Limit the amount of unison rhythms.
 - Use the piano to help keep the beat and add percussive interest, for example, by arpeggiating the chords
+- Use the percussion track to enhance the rhythmic structure and add groove
+- Do not complain that there are too many notes to write, just do your best.
 """
 
 # ------------------------------------------------------------------
@@ -271,8 +280,8 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
     """
     print(f"\nPreparing to save MIDI file as {filename}...")
 
-    # We have 5 voices total (bass, tenor, alto, soprano, piano).
-    num_tracks = 5
+    # We have 6 voices total (bass, tenor, alto, soprano, piano, percussion).
+    num_tracks = 6
     midi_file = MIDIFile(num_tracks)
 
     for i in range(num_tracks):
@@ -280,6 +289,7 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
 
     # Gather the user's chosen instruments from metadata.
     # Piano is always 0 (Acoustic Grand).
+    # Percussion is always on channel 10.
     instruments = piece.metadata.instruments
     # Program numbers (0..127)
     bass_prog = instruments.bass
@@ -288,17 +298,18 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
     soprano_prog = instruments.soprano
     piano_prog = 0   # fixed
 
-    # 5 tracks: track 0 = bass, 1 = tenor, 2 = alto, 3 = soprano, 4 = piano
+    # 6 tracks: track 0 = bass, 1 = tenor, 2 = alto, 3 = soprano, 4 = piano, 5 = percussion
     midi_file.addProgramChange(0, 0, 0, bass_prog)     # track=0, channel=0
     midi_file.addProgramChange(1, 1, 0, tenor_prog)    # track=1, channel=1
     midi_file.addProgramChange(2, 2, 0, alto_prog)     # track=2, channel=2
     midi_file.addProgramChange(3, 3, 0, soprano_prog)  # track=3, channel=3
     midi_file.addProgramChange(4, 4, 0, piano_prog)    # track=4, channel=4
+    # No program change needed for percussion (channel 10)
 
     # Now write out the notes per voice.
-    voice_order = ["Bass", "Tenor", "Alto", "Soprano", "Piano"]
+    voice_order = ["Bass", "Tenor", "Alto", "Soprano", "Piano", "Percussion"]
     for i, voice_name in enumerate(voice_order):
-        channel = i
+        channel = 9 if voice_name == "Percussion" else i  # Channel 10 (index 9) for percussion
         time_pos = 0.0
         track_notes = voices[voice_name]
 
@@ -334,7 +345,8 @@ def aggregate_voice_lines(section_list: list) -> dict:
         "Tenor": [],
         "Alto": [],
         "Soprano": [],
-        "Piano": []
+        "Piano": [],
+        "Percussion": []
     }
     for sec in section_list:
         for phr in sec.phrases:
@@ -343,6 +355,7 @@ def aggregate_voice_lines(section_list: list) -> dict:
             aggregated["Alto"].extend(phr.alto)
             aggregated["Soprano"].extend(phr.soprano)
             aggregated["Piano"].extend(phr.piano)
+            aggregated["Percussion"].extend(phr.percussion)
     return aggregated
 
 # ------------------------------------------------------------------
@@ -443,6 +456,9 @@ async def generate_melodies(theme: str, models: List[str] = None) -> None:
                 "Alto": full_alto,
                 "Soprano": full_sop,
                 "Piano": full_piano,
+                "Percussion": (sectionA_voices["Percussion"] + sectionA_voices["Percussion"] +
+                             sectionB_voices["Percussion"] + sectionB_voices["Percussion"] +
+                             sectionAprime_voices["Percussion"] + sectionAprime_voices["Percussion"])
             }
 
             save_melodies_to_midi(full_piece_voices, piece.metadata.tempo, midi_filename, piece)

@@ -1,6 +1,6 @@
 // Represents the duration and pitch of a musical note
 class NoteDuration {
-  note int? @description("MIDI note number, null indicates a rest")
+  note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
   duration float @description("Duration in beats")
 }
 
@@ -28,7 +28,7 @@ class Phrase {
   alto NoteDuration[]
   soprano NoteDuration[]
   piano NoteDuration[]
-  percussion NoteDuration[]
+  percussion NoteDuration[] @description("Percussion track (channel 10) - uses General MIDI drum map note numbers")
 }
 
 class Section {

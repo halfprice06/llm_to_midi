@@ -137,9 +137,6 @@ client<llm> Gemini20FlashThinkingExp {
 }
 
 
-
-
-
 // https://docs.boundaryml.com/docs/snippets/clients/retry
 retry_policy Constant {
   max_retries 3
