@@ -1,0 +1,356 @@
+{
+    "metadata": {
+      "title": "Sunlit Village Stroll",
+      "tempo": 100,
+      "key_signature": "C Major",
+      "time_signature": "4/4",
+      "instruments": {
+        "bass": 32,
+        "tenor": 42,
+        "alto": 71,
+        "soprano": 73
+      }
+    },
+    "form": {
+      "sectionA": [
+        {
+          "section_label": "A1",
+          "phrases": [
+            {
+              "phrase_label": "A1a",
+              "bass": [
+                { "note": 36, "duration": 1.5 },
+                { "note": null, "duration": 0.5 },
+                { "note": 43, "duration": 2.0 },
+                { "note": 41, "duration": 1.0 },
+                { "note": 40, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 38, "duration": 1.0 },
+                { "note": 36, "duration": 2.0 }
+              ],
+              "tenor": [
+                { "note": 48, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 52, "duration": 2.0 }
+              ],
+              "alto": [
+                { "note": 60, "duration": 1.0 },
+                { "note": 59, "duration": 1.0 },
+                { "note": 57, "duration": 0.5 },
+                { "note": null, "duration": 0.5 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 60, "duration": 1.0 },
+                { "note": 59, "duration": 2.0 }
+              ],
+              "soprano": [
+                { "note": 64, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 67, "duration": 0.5 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 69, "duration": 1.0 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 72, "duration": 2.0 }
+              ],
+              "piano": [
+                { "note": 36, "duration": 0.5 },
+                { "note": 48, "duration": 0.5 },
+                { "note": 55, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 60, "duration": 0.5 },
+                { "note": 59, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 67, "duration": 2.0 }
+              ]
+            },
+            {
+              "phrase_label": "A1b",
+              "bass": [
+                { "note": 36, "duration": 1.0 },
+                { "note": 40, "duration": 1.0 },
+                { "note": 43, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 45, "duration": 2.0 },
+                { "note": 41, "duration": 1.0 },
+                { "note": 43, "duration": 1.0 },
+                { "note": 36, "duration": 2.0 }
+              ],
+              "tenor": [
+                { "note": 48, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 55, "duration": 2.0 }
+              ],
+              "alto": [
+                { "note": 60, "duration": 1.0 },
+                { "note": 60, "duration": 0.5 },
+                { "note": 62, "duration": 0.5 },
+                { "note": 64, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": 64, "duration": 1.0 },
+                { "note": 60, "duration": 2.0 }
+              ],
+              "soprano": [
+                { "note": 67, "duration": 1.0 },
+                { "note": 69, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 74, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 72, "duration": 2.0 }
+              ],
+              "piano": [
+                { "note": 36, "duration": 0.5 },
+                { "note": 48, "duration": 0.5 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 55, "duration": 0.5 },
+                { "note": 60, "duration": 0.5 },
+                { "note": null, "duration": 1.0 },
+                { "note": 64, "duration": 1.0 },
+                { "note": 60, "duration": 2.0 }
+              ]
+            }
+          ]
+        }
+      ],
+      "sectionB": [
+        {
+          "section_label": "B1",
+          "phrases": [
+            {
+              "phrase_label": "B1a",
+              "bass": [
+                { "note": 45, "duration": 1.0 },
+                { "note": 44, "duration": 1.0 },
+                { "note": 43, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 48, "duration": 1.0 },
+                { "note": 45, "duration": 1.0 },
+                { "note": 43, "duration": 2.0 }
+              ],
+              "tenor": [
+                { "note": 52, "duration": 1.0 },
+                { "note": 51, "duration": 0.5 },
+                { "note": 50, "duration": 0.5 },
+                { "note": 48, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 50, "duration": 2.0 }
+              ],
+              "alto": [
+                { "note": 57, "duration": 1.0 },
+                { "note": 56, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 55, "duration": 2.0 }
+              ],
+              "soprano": [
+                { "note": 69, "duration": 1.0 },
+                { "note": 68, "duration": 1.0 },
+                { "note": 67, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 69, "duration": 1.0 },
+                { "note": 67, "duration": 2.0 }
+              ],
+              "piano": [
+                { "note": 45, "duration": 0.5 },
+                { "note": 57, "duration": 0.5 },
+                { "note": 52, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 50, "duration": 0.5 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 55, "duration": 2.0 }
+              ]
+            },
+            {
+              "phrase_label": "B1b",
+              "bass": [
+                { "note": 36, "duration": 1.0 },
+                { "note": 38, "duration": 0.5 },
+                { "note": 40, "duration": 0.5 },
+                { "note": 41, "duration": 1.0 },
+                { "note": 43, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 45, "duration": 2.0 },
+                { "note": 36, "duration": 2.0 }
+              ],
+              "tenor": [
+                { "note": 48, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 57, "duration": 2.0 },
+                { "note": 55, "duration": 2.0 }
+              ],
+              "alto": [
+                { "note": 60, "duration": 1.0 },
+                { "note": 60, "duration": 1.0 },
+                { "note": 64, "duration": 0.5 },
+                { "note": 65, "duration": 0.5 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": 62, "duration": 1.0 },
+                { "note": 60, "duration": 2.0 }
+              ],
+              "soprano": [
+                { "note": 72, "duration": 1.0 },
+                { "note": 74, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": 71, "duration": 1.0 },
+                { "note": 69, "duration": 1.0 },
+                { "note": 67, "duration": 2.0 },
+                { "note": 72, "duration": 2.0 }
+              ],
+              "piano": [
+                { "note": 36, "duration": 0.5 },
+                { "note": 48, "duration": 0.5 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 60, "duration": 0.5 },
+                { "note": null, "duration": 0.5 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 60, "duration": 2.0 },
+                { "note": 64, "duration": 2.0 }
+              ]
+            }
+          ]
+        }
+      ],
+      "sectionA_prime": [
+        {
+          "section_label": "A1_prime",
+          "phrases": [
+            {
+              "phrase_label": "A1'_a",
+              "bass": [
+                { "note": 36, "duration": 1.5 },
+                { "note": null, "duration": 0.5 },
+                { "note": 43, "duration": 2.0 },
+                { "note": 41, "duration": 1.0 },
+                { "note": 40, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 45, "duration": 1.0 },
+                { "note": 36, "duration": 2.0 }
+              ],
+              "tenor": [
+                { "note": 48, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 52, "duration": 2.0 }
+              ],
+              "alto": [
+                { "note": 60, "duration": 1.0 },
+                { "note": 59, "duration": 1.0 },
+                { "note": 57, "duration": 0.5 },
+                { "note": null, "duration": 0.5 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 57, "duration": 1.0 },
+                { "note": 59, "duration": 2.0 }
+              ],
+              "soprano": [
+                { "note": 64, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 67, "duration": 0.5 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 69, "duration": 1.0 },
+                { "note": 71, "duration": 1.0 },
+                { "note": 72, "duration": 2.0 }
+              ],
+              "piano": [
+                { "note": 36, "duration": 0.5 },
+                { "note": 48, "duration": 0.5 },
+                { "note": 55, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 59, "duration": 0.5 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 60, "duration": 1.0 },
+                { "note": 64, "duration": 2.0 }
+              ]
+            },
+            {
+              "phrase_label": "A1'_b",
+              "bass": [
+                { "note": 36, "duration": 1.0 },
+                { "note": 38, "duration": 0.5 },
+                { "note": 40, "duration": 0.5 },
+                { "note": 41, "duration": 1.0 },
+                { "note": 43, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 36, "duration": 1.0 },
+                { "note": 36, "duration": 3.0 }
+              ],
+              "tenor": [
+                { "note": 48, "duration": 1.0 },
+                { "note": 50, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 55, "duration": 1.0 },
+                { "note": 53, "duration": 1.0 },
+                { "note": 52, "duration": 1.0 },
+                { "note": 48, "duration": 3.0 }
+              ],
+              "alto": [
+                { "note": 60, "duration": 1.0 },
+                { "note": 60, "duration": 1.0 },
+                { "note": 64, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 65, "duration": 1.0 },
+                { "note": 64, "duration": 1.0 },
+                { "note": 60, "duration": 1.0 },
+                { "note": 60, "duration": 3.0 }
+              ],
+              "soprano": [
+                { "note": 72, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": 74, "duration": 1.0 },
+                { "note": null, "duration": 1.0 },
+                { "note": 76, "duration": 1.0 },
+                { "note": 74, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": 72, "duration": 3.0 }
+              ],
+              "piano": [
+                { "note": 36, "duration": 0.5 },
+                { "note": 48, "duration": 0.5 },
+                { "note": 60, "duration": 1.0 },
+                { "note": null, "duration": 0.5 },
+                { "note": 64, "duration": 0.5 },
+                { "note": 67, "duration": 1.0 },
+                { "note": 72, "duration": 1.0 },
+                { "note": 72, "duration": 3.0 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+  
