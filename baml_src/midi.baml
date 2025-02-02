@@ -48,12 +48,12 @@ class ModularPhrase {
   alto NoteDuration[]
   soprano NoteDuration[]
   piano NoteDuration[]
-  percussion NoteDuration[]?
+  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers")
 }
 
 class ModularSection {
-  section_label string
-  phrases ModularPhrase[]
+  section_label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
+  phrases ModularPhrase[] @description("")
 }
 
 class ModularPiece {
