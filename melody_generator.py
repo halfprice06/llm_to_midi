@@ -203,12 +203,12 @@ MODEL_GENERATORS = {
     "o1": generate_with_openai_o1,
     "o1-mini": generate_with_openai_o1_mini,
     "o3-mini": generate_with_openai_o3_mini,
-    "gpt4o": generate_with_openai_gpt4o,
+    # "gpt4o": generate_with_openai_gpt4o,
     "sonnet": generate_with_anthropic_sonnet,
-    "hyperbolic-deepseek": generate_with_hyperbolic_deepseek_reasoner,
+    # "hyperbolic-deepseek": generate_with_hyperbolic_deepseek_reasoner,
     "opus": generate_with_anthropic_opus,
-    "haiku": generate_with_anthropic_haiku,
-    "gemini-15-flash": generate_with_gemini_15_flash,
+    # "haiku": generate_with_anthropic_haiku,
+    # "gemini-15-flash": generate_with_gemini_15_flash,
     "gemini-15-pro": generate_with_gemini_15_pro,
     "gemini-20-flash": generate_with_gemini_20_flash_exp,
     "gemini-20-flash-thinking": generate_with_gemini_20_flash_thinking_exp
@@ -361,7 +361,14 @@ def aggregate_voice_lines(section_list: list) -> dict:
             aggregated["Alto"].extend(phr.alto)
             aggregated["Soprano"].extend(phr.soprano)
             aggregated["Piano"].extend(phr.piano)
-            aggregated["Percussion"].extend(phr.percussion)
+            # Only extend percussion if it exists
+            if hasattr(phr, 'percussion') and phr.percussion is not None:
+                aggregated["Percussion"].extend(phr.percussion)
+    
+    # Remove empty percussion track if no percussion was added
+    if not aggregated["Percussion"]:
+        del aggregated["Percussion"]
+        
     return aggregated
 
 # ------------------------------------------------------------------
@@ -461,11 +468,18 @@ async def generate_melodies(theme: str, models: List[str] = None) -> None:
                 "Tenor": full_tenor,
                 "Alto": full_alto,
                 "Soprano": full_sop,
-                "Piano": full_piano,
-                "Percussion": (sectionA_voices["Percussion"] + sectionA_voices["Percussion"] +
-                             sectionB_voices["Percussion"] + sectionB_voices["Percussion"] +
-                             sectionAprime_voices["Percussion"] + sectionAprime_voices["Percussion"])
+                "Piano": full_piano
             }
+
+            # Only add percussion if it exists in all sections
+            if ("Percussion" in sectionA_voices and 
+                "Percussion" in sectionB_voices and 
+                "Percussion" in sectionAprime_voices):
+                full_piece_voices["Percussion"] = (
+                    sectionA_voices["Percussion"] + sectionA_voices["Percussion"] +
+                    sectionB_voices["Percussion"] + sectionB_voices["Percussion"] +
+                    sectionAprime_voices["Percussion"] + sectionAprime_voices["Percussion"]
+                )
 
             save_melodies_to_midi(full_piece_voices, piece.metadata.tempo, midi_filename, piece)
 

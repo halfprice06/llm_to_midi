@@ -104,6 +104,7 @@ client<llm> AnthropicOpus {
 
 client<llm> AnthropicHaiku {
   provider anthropic
+  retry_policy Exponential
   options {
     model "claude-3-5-haiku-latest"
     api_key env.ANTHROPIC_API_KEY
