@@ -34,17 +34,18 @@ class StreamState(BaseModel, Generic[T]):
     state: Literal["Pending", "Incomplete", "Complete"]
 
 
+class CompositionPlan(BaseModel):
+    plan_title: Optional[str] = None
+    style: Optional[str] = None
+    sections: List["SectionPlan"]
+
 class Instrumentation(BaseModel):
     bass: Optional[int] = None
     tenor: Optional[int] = None
     alto: Optional[int] = None
     soprano: Optional[int] = None
 
-class NoteDuration(BaseModel):
-    note: Optional[int] = None
-    duration: Optional[float] = None
-
-class Phrase(BaseModel):
+class ModularPhrase(BaseModel):
     phrase_label: Optional[str] = None
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
@@ -53,18 +54,22 @@ class Phrase(BaseModel):
     piano: List["NoteDuration"]
     percussion: List["NoteDuration"]
 
-class RoundedBinaryForm(BaseModel):
-    sectionA: List["Section"]
-    sectionB: List["Section"]
-    sectionA_prime: List["Section"]
-
-class RoundedBinaryPiece(BaseModel):
+class ModularPiece(BaseModel):
     metadata: Optional["SongMetadata"] = None
-    form: Optional["RoundedBinaryForm"] = None
+    sections: List["ModularSection"]
 
-class Section(BaseModel):
+class ModularSection(BaseModel):
     section_label: Optional[str] = None
-    phrases: List["Phrase"]
+    phrases: List["ModularPhrase"]
+
+class NoteDuration(BaseModel):
+    note: Optional[int] = None
+    duration: Optional[float] = None
+
+class SectionPlan(BaseModel):
+    label: Optional[str] = None
+    description: Optional[str] = None
+    number_of_phrases: Optional[int] = None
 
 class SongMetadata(BaseModel):
     title: Optional[str] = None

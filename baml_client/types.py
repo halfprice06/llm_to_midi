@@ -39,17 +39,18 @@ def all_succeeded(checks: Dict[CheckName, Check]) -> bool:
 
 
 
+class CompositionPlan(BaseModel):
+    plan_title: str
+    style: Optional[str] = None
+    sections: List["SectionPlan"]
+
 class Instrumentation(BaseModel):
     bass: int
     tenor: int
     alto: int
     soprano: int
 
-class NoteDuration(BaseModel):
-    note: Optional[int] = None
-    duration: float
-
-class Phrase(BaseModel):
+class ModularPhrase(BaseModel):
     phrase_label: str
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
@@ -58,18 +59,22 @@ class Phrase(BaseModel):
     piano: List["NoteDuration"]
     percussion: Optional[List["NoteDuration"]] = None
 
-class RoundedBinaryForm(BaseModel):
-    sectionA: List["Section"]
-    sectionB: List["Section"]
-    sectionA_prime: List["Section"]
-
-class RoundedBinaryPiece(BaseModel):
+class ModularPiece(BaseModel):
     metadata: "SongMetadata"
-    form: "RoundedBinaryForm"
+    sections: List["ModularSection"]
 
-class Section(BaseModel):
+class ModularSection(BaseModel):
     section_label: str
-    phrases: List["Phrase"]
+    phrases: List["ModularPhrase"]
+
+class NoteDuration(BaseModel):
+    note: Optional[int] = None
+    duration: float
+
+class SectionPlan(BaseModel):
+    label: str
+    description: Optional[str] = None
+    number_of_phrases: int
 
 class SongMetadata(BaseModel):
     title: str

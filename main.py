@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 
 """
-Procedurally Generated MIDI Melody Generator (Rounded Binary Edition, 5-Voice Version)
+Procedurally Generated MIDI Melody Generator (Modular Composition Edition)
 
-Generates musical pieces in rounded binary form (A, B, A') with up to 5 separate voices
-(bass, tenor, alto, soprano, piano) using various LLM models through BAML.
+Generates musical pieces using a two-step process:
+1. First generates a composition plan with sections and phrases
+2. Then generates the actual musical content following that plan
 
-Each generated piece is saved as:
+Each generated piece includes:
+- Multiple voices: bass, tenor, alto, soprano, piano, and optional percussion
+- A structured approach with clearly defined sections and phrases
+- Musical coherence guided by the composition plan
+
+Each piece is saved as:
 1. A multi-track MIDI file in the "outputs/" folder
-2. A JSON log file capturing the raw schema data from the LLM
+2. A JSON log file capturing both the composition plan and the final piece data
 
-Available models are automatically determined from the melody generator's MODEL_GENERATORS.
+Uses BAML with Anthropic's Claude models for generation.
 
 Requires:
-    pip install pydantic MIDIUtil baml-py
+    pip install pydantic MIDIUtil baml-client python-dotenv
 """
 import dotenv
 import os
 import asyncio
+from melody_generator import plan_and_generate_modular_song
 
 dotenv.load_dotenv()
-
-from melody_generator import generate_melodies, MODEL_GENERATORS
 
 async def main():
     # Ensure outputs folder exists
@@ -29,14 +34,8 @@ async def main():
 
     print("=========================================")
     print("   Procedurally Generated MIDI Maker    ")
-    print("      (Rounded Binary Form, 5 voices)   ")
+    print("        (Modular Composition)           ")
     print("=========================================\n")
-
-    # Show available models
-    print("Available models:")
-    for model in MODEL_GENERATORS.keys():
-        print(f"  - {model}")
-    print()
 
     # Get theme from user
     print("Enter your theme/instructions for the composition.")
@@ -50,10 +49,12 @@ async def main():
         theme = "Write a cheerful waltz in C major"
 
     print(f"\nGenerating music with theme: {theme}")
-    print("Using all available models...")
+    print("\nThis will be done in two steps:")
+    print("1. Generating a composition plan")
+    print("2. Creating the full piece based on that plan\n")
 
-    # Generate the melodies using all available models concurrently
-    await generate_melodies(theme)
+    # Generate the piece using the new modular approach
+    await plan_and_generate_modular_song(theme)
 
 if __name__ == "__main__":
     asyncio.run(main()) 

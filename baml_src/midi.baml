@@ -1,9 +1,12 @@
+/////////////////////////////
+// Existing classes
+/////////////////////////////
+
 // Represents the duration and pitch of a musical note
 class NoteDuration {
   note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
   duration float @description("Duration in beats")
 }
-
 
 // Holds program numbers (0-127) for different voices
 class Instrumentation {
@@ -21,211 +24,119 @@ class SongMetadata {
   instruments Instrumentation
 }
 
-class Phrase {
+/////////////////////////////
+// NEW: Flexible modular design
+/////////////////////////////
+
+
+class SectionPlan {
+  label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
+  description string? @description("Textual description for the section's role in the piece.")
+  number_of_phrases int @description("How many phrases are planned in this section.")
+}
+
+class CompositionPlan {
+  plan_title string @description("A short descriptive title for the composition plan.")
+  style string? @description("Optional style or genre for the piece, e.g. 'classical waltz', 'jazz ballad', etc.")
+  sections SectionPlan[] @description("A list of sections planned for the piece.")
+}
+
+class ModularPhrase {
   phrase_label string
   bass NoteDuration[]
   tenor NoteDuration[]
   alto NoteDuration[]
   soprano NoteDuration[]
   piano NoteDuration[]
-  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers")
+  percussion NoteDuration[]?
 }
 
-class Section {
-  section_label string @description("e.g., 'A1', 'B1', etc.")
-  phrases Phrase[]
+class ModularSection {
+  section_label string
+  phrases ModularPhrase[]
 }
 
-// Represents a musical piece in rounded binary form (A-B-A') structure
-class RoundedBinaryForm {
-  sectionA Section[]
-  sectionB Section[]
-  sectionA_prime Section[]
-}
-
-class RoundedBinaryPiece {
+class ModularPiece {
   metadata SongMetadata
-  form RoundedBinaryForm
+  sections ModularSection[]
 }
 
-function GenerateMusic_OpenAIo1(theme: string, prompt: string) -> RoundedBinaryPiece {
+function GenerateCompositionPlan(theme: string) -> CompositionPlan {
   client "OpenAIo1"
   prompt #"
-{{ prompt }}
+You are an expert music composer. The user wants to plan the structure of a piece
+BEFORE generating any actual note-level content.
 
+They have asked for the following theme or instructions:
+{{ theme }}
+
+Return a JSON object that follows the schema (CompositionPlan) exactly:
 {{ ctx.output_format }}
 
-Additional user instructions:
-
-{{ theme }}
-  "#
+Guidelines for plan:
+- Provide a plan title (plan_title).
+- Optionally specify a style or genre (style).
+- Provide a list of sections, each with a label, optional description, and how many phrases it should have.
+- The user wants to see the piece broken into any structure you see fit (intro, verse, chorus, coda, etc.).
+- Only describe the plan; do NOT generate note-level detail at this step.
+"#
 }
 
-function GenerateMusic_OpenAIo1Mini(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "OpenAIo1Mini" 
+function GenerateModularSong(plan: CompositionPlan) -> ModularPiece {
+  client "OpenAIo1"
   prompt #"
-{{ prompt }}
+You are an expert composer. A user has already decided on the piece structure (sections, phrases) via the following plan:
+{{ plan }}
 
-Additional user instructions:
+Now please fill in the actual note-level content for each section and each phrase.
 
-{{ theme }}
+Requirements / guidelines:
+- Each section in 'plan.sections' must appear in the final output with a matching label.
+- For each planned phrase, generate enough note-level detail in the voices (bass, tenor, alto, soprano, piano, and optionally percussion).
+- The final output must match the 'ModularPiece' schema exactly:
 
 {{ ctx.output_format }}
-  "#
+
+Notes:
+- Use valid MIDI note numbers (0..127), or null for rests.
+- For percussion (channel 10), use the typical GM drum note numbers (35, 36, 38, 42, etc.) if applicable.
+- The 'metadata' can be guessed or derived from the plan. Provide a creative title, a tempo, a key signature, time signature, etc.
+- The user wants a cohesive piece but with the plan's structure.
+"#
 }
 
-function GenerateMusic_OpenAIo3Mini(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "OpenAIo3Mini"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
+test GenerateCompositionPlan {
+  functions [GenerateCompositionPlan]
+  args {
+    theme #"
+      Write Twinkle Twinkle Little Star in C
+    "#
+  }
 }
 
-function GenerateMusic_OpenAIGPT4o(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "OpenAIGPT4o"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_HyperbolicDeepseekReasoner(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "HyperbolicDeepseekReasoner"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_HyperbolicDeepseekV3(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "HyperbolicDeepseekV3"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions: 
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_DeepseekReasoner(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "DeepseekReasoner"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_AnthropicSonnet(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "AnthropicSonnet"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_AnthropicOpus(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "AnthropicOpus"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_AnthropicHaiku(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "AnthropicHaiku"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_Gemini15Flash(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "Gemini15Flash"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_Gemini15Pro(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "Gemini15Pro"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_Gemini20FlashExp(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "Gemini20FlashExp"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
-}
-
-function GenerateMusic_Gemini20FlashThinkingExp(theme: string, prompt: string) -> RoundedBinaryPiece {
-  client "Gemini20FlashThinkingExp"
-  prompt #"
-{{ prompt }}
-
-Additional user instructions:
-
-{{ theme }}
-
-{{ ctx.output_format }}
-  "#
+test GenerateModularSong {
+  functions [GenerateModularSong]
+  args {
+    plan {
+      plan_title "Twinkle Twinkle Little Star - Traditional Arrangement"
+      style "Children's Folk Song"
+      sections [
+        {
+          label "A Section"
+          description "First melodic statement ('Twinkle twinkle little star, how I wonder what you are')"
+          number_of_phrases 2
+        }
+        {
+          label "B Section" 
+          description "Middle contrasting section ('Up above the world so high, like a diamond in the sky')"
+          number_of_phrases 2
+        }
+        {
+          label "A' Section"
+          description "Return to main melody ('Twinkle twinkle little star, how I wonder what you are')"
+          number_of_phrases 2
+        }
+      ]
+    }
+  }
 }
