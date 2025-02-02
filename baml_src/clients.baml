@@ -59,6 +59,17 @@ client<llm> HyperbolicDeepseekReasoner {
   }
 }
 
+client<llm> HyperbolicDeepseekV3 {
+  provider openai-generic
+  options {
+    model deepseek-ai/DeepSeek-V3
+    api_key env.HYPERBOLIC_DEEPSEEK_API_KEY
+    base_url "https://api.hyperbolic.xyz/v1/"
+    default_role "user"
+    temperature 1
+  }
+}
+
 
 client<llm> DeepseekReasoner {
   provider openai-generic

@@ -224,13 +224,13 @@ You are an expert composer well-versed in music theory.
 Compose a short piece in rounded binary form (A, B, A'). Each section (A, B, A') can be further subdivided into one or more subsections (A1, A2, etc.).
 
 ## Voices
-Each subsection must contain a minimum of two phrases, and each phrase must have all 6 voices:
+Each subsection must contain a minimum of two phrases, and each phrase must have these voices:
 - bass
 - tenor 
 - alto
 - soprano
 - piano
-- percussion (channel 10)
+- percussion (channel 10) - optional, only include if it fits the genre and style
 
 ## Instruments
 Choose an appropriate MIDI instrument for each of the four voices:
@@ -250,7 +250,7 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - Ensure there is a lot of variety between the phrases
 - The final A' must restate A's theme
 - Parts may rest at times to give other parts a chance to shine and listeners a chance to catch their breath
-- Use the percussion track to provide rhythmic foundation and interest
+- Use the percussion track to provide rhythmic foundation and interest (if appropriate for the genre)
 
 ## Technical Reminders
 - Each section must contain a minimum of two phrases
@@ -264,7 +264,8 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - The final A' must restate A's theme
 - **EXTREMELY IMPORTANT**: Make sure there is a variety of rhythms and counterpoint among the various voices. Limit the amount of unison rhythms.
 - Use the piano to help keep the beat and add percussive interest, for example, by arpeggiating the chords
-- Use the percussion track to enhance the rhythmic structure and add groove
+- Use the percussion track to enhance the rhythmic structure and add groove, but only if it fits the genre and style of the piece
+- If the percussion track would not fit the genre or style (e.g., for a nocturne or other delicate pieces), you can omit it
 - Do not complain that there are too many notes to write, just do your best.
 """
 
@@ -280,8 +281,9 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
     """
     print(f"\nPreparing to save MIDI file as {filename}...")
 
-    # We have 6 voices total (bass, tenor, alto, soprano, piano, percussion).
-    num_tracks = 6
+    # Count how many tracks we need (5 or 6 depending on if percussion is present)
+    has_percussion = "Percussion" in voices and voices["Percussion"]
+    num_tracks = 6 if has_percussion else 5
     midi_file = MIDIFile(num_tracks)
 
     for i in range(num_tracks):
@@ -298,7 +300,7 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
     soprano_prog = instruments.soprano
     piano_prog = 0   # fixed
 
-    # 6 tracks: track 0 = bass, 1 = tenor, 2 = alto, 3 = soprano, 4 = piano, 5 = percussion
+    # Add program changes for all tracks except percussion
     midi_file.addProgramChange(0, 0, 0, bass_prog)     # track=0, channel=0
     midi_file.addProgramChange(1, 1, 0, tenor_prog)    # track=1, channel=1
     midi_file.addProgramChange(2, 2, 0, alto_prog)     # track=2, channel=2
@@ -307,23 +309,27 @@ def save_melodies_to_midi(voices: dict, bpm: int, filename: str, piece: RoundedB
     # No program change needed for percussion (channel 10)
 
     # Now write out the notes per voice.
-    voice_order = ["Bass", "Tenor", "Alto", "Soprano", "Piano", "Percussion"]
+    voice_order = ["Bass", "Tenor", "Alto", "Soprano", "Piano"]
+    if has_percussion:
+        voice_order.append("Percussion")
+
     for i, voice_name in enumerate(voice_order):
         channel = 9 if voice_name == "Percussion" else i  # Channel 10 (index 9) for percussion
         time_pos = 0.0
         track_notes = voices[voice_name]
 
-        for nd in track_notes:
-            if nd.note is not None:
-                midi_file.addNote(
-                    track=i,
-                    channel=channel,
-                    pitch=nd.note,
-                    time=time_pos,
-                    duration=nd.duration,
-                    volume=100
-                )
-            time_pos += nd.duration
+        if track_notes:  # Only process if we have notes for this voice
+            for nd in track_notes:
+                if nd.note is not None:
+                    midi_file.addNote(
+                        track=i,
+                        channel=channel,
+                        pitch=nd.note,
+                        time=time_pos,
+                        duration=nd.duration,
+                        volume=100
+                    )
+                time_pos += nd.duration
 
     print("Saving MIDI file...")
     with open(filename, "wb") as outf:

@@ -56,7 +56,7 @@ class Phrase(BaseModel):
     alto: List["NoteDuration"]
     soprano: List["NoteDuration"]
     piano: List["NoteDuration"]
-    percussion: List["NoteDuration"]
+    percussion: Optional[List["NoteDuration"]] = None
 
 class RoundedBinaryForm(BaseModel):
     sectionA: List["Section"]

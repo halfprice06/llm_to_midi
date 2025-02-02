@@ -257,6 +257,29 @@ class BamlAsyncClient:
       )
       return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
     
+    async def GenerateMusic_HyperbolicDeepseekV3(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.RoundedBinaryPiece:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = await self.__runtime.call_function(
+        "GenerateMusic_HyperbolicDeepseekV3",
+        {
+          "theme": theme,"prompt": prompt,
+        },
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+    
     async def GenerateMusic_OpenAIGPT4o(
         self,
         theme: str,prompt: str,
@@ -622,6 +645,37 @@ class BamlStreamClient:
 
       raw = self.__runtime.stream_function(
         "GenerateMusic_HyperbolicDeepseekReasoner",
+        {
+          "theme": theme,
+          "prompt": prompt,
+        },
+        None,
+        self.__ctx_manager.get(),
+        tb,
+        __cr__,
+      )
+
+      return baml_py.BamlStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+        raw,
+        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        self.__ctx_manager.get(),
+      )
+    
+    def GenerateMusic_HyperbolicDeepseekV3(
+        self,
+        theme: str,prompt: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+      __tb__ = baml_options.get("tb", None)
+      if __tb__ is not None:
+        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
+      else:
+        tb = None
+      __cr__ = baml_options.get("client_registry", None)
+
+      raw = self.__runtime.stream_function(
+        "GenerateMusic_HyperbolicDeepseekV3",
         {
           "theme": theme,
           "prompt": prompt,

@@ -28,7 +28,7 @@ class Phrase {
   alto NoteDuration[]
   soprano NoteDuration[]
   piano NoteDuration[]
-  percussion NoteDuration[] @description("Percussion track (channel 10) - uses General MIDI drum map note numbers")
+  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers")
 }
 
 class Section {
@@ -106,6 +106,19 @@ function GenerateMusic_HyperbolicDeepseekReasoner(theme: string, prompt: string)
 {{ prompt }}
 
 Additional user instructions:
+
+{{ theme }}
+
+{{ ctx.output_format }}
+  "#
+}
+
+function GenerateMusic_HyperbolicDeepseekV3(theme: string, prompt: string) -> RoundedBinaryPiece {
+  client "HyperbolicDeepseekV3"
+  prompt #"
+{{ prompt }}
+
+Additional user instructions: 
 
 {{ theme }}
 
@@ -219,7 +232,7 @@ Additional user instructions:
 
 
 test TestName {
-  functions [GenerateMusic_DeepseekReasoner]
+  functions [GenerateMusic_HyperbolicDeepseekV3]
   args {
     theme #"
       Write a waltz in A Minor
@@ -233,12 +246,13 @@ You are an expert composer well-versed in music theory.
 Compose a short piece in rounded binary form (A, B, A'). Each section (A, B, A') can be further subdivided into one or more subsections (A1, A2, etc.).
 
 ## Voices
-Each subsection must contain a minimum of two phrases, and each phrase can have up to 5 voices:
+Each subsection must contain a minimum of two phrases, and each phrase must have all 6 voices:
 - bass
 - tenor 
 - alto
 - soprano
 - piano
+- percussion (channel 10)
 
 ## Instruments
 Choose an appropriate MIDI instrument for each of the four voices:
@@ -248,6 +262,7 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - soprano
 
 *Note: The piano voice is always instrument 0 (Acoustic Grand).*
+*Note: The percussion track uses General MIDI drum map note numbers on channel 10.*
 
 ## Composition Guidelines
 - Use varied rhythms for each part
@@ -257,16 +272,22 @@ Choose an appropriate MIDI instrument for each of the four voices:
 - Ensure there is a lot of variety between the phrases
 - The final A' must restate A's theme
 - Parts may rest at times to give other parts a chance to shine and listeners a chance to catch their breath
+- Use the percussion track to provide rhythmic foundation and interest
 
 ## Technical Reminders
 - Each section must contain a minimum of two phrases
 - Make phrases extremely long and interesting
-- "note" is a MIDI note number (60=middle C) or null for rest
+- "note" is a MIDI note number:
+  - For melodic parts (60=middle C)
+  - For percussion (35=acoustic bass drum, 38=acoustic snare, 42=closed hi-hat, etc.)
+  - null indicates a rest
 - "duration" is in beats (1.0=quarter, 0.5=eighth, etc.)
 - End each phrase with an interesting cadence or a long note
 - The final A' must restate A's theme
 - **EXTREMELY IMPORTANT**: Make sure there is a variety of rhythms and counterpoint among the various voices. Limit the amount of unison rhythms.
 - Use the piano to help keep the beat and add percussive interest, for example, by arpeggiating the chords
+- Use the percussion track to enhance the rhythmic structure and add groove
+- Do not complain that there are too many notes to write, just do your best.
     "#
   }
 }
