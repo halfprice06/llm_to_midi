@@ -2,6 +2,7 @@
 
 client<llm> OpenAIo1 {
   provider openai
+  retry_policy Exponential
   options {
     model "o1"
     reasoning_effort "high"
@@ -13,6 +14,7 @@ client<llm> OpenAIo1 {
 
 client<llm> OpenAIo1Mini {
   provider openai
+  retry_policy Exponential
   options {
     model "o1-mini"
     temperature 1
@@ -49,6 +51,7 @@ client<llm> OpenAIGPT4o {
 
 client<llm> HyperbolicDeepseekReasoner {
   provider openai-generic
+  retry_policy Exponential
   options {
     model deepseek-ai/DeepSeek-R1
     api_key env.HYPERBOLIC_DEEPSEEK_API_KEY
@@ -61,6 +64,7 @@ client<llm> HyperbolicDeepseekReasoner {
 
 client<llm> HyperbolicDeepseekV3 {
   provider openai-generic
+  retry_policy Exponential
   options {
     model deepseek-ai/DeepSeek-V3
     api_key env.HYPERBOLIC_DEEPSEEK_API_KEY
@@ -73,6 +77,7 @@ client<llm> HyperbolicDeepseekV3 {
 
 client<llm> DeepseekReasoner {
   provider openai-generic
+  retry_policy Exponential
   options {
     model deepseek-reasoner
     api_key env.DEEPSEEK_API_KEY
@@ -85,6 +90,7 @@ client<llm> DeepseekReasoner {
 
 client<llm> AnthropicSonnet {
   provider anthropic
+  retry_policy Exponential
   options {
     model "claude-3-5-sonnet-latest"
     api_key env.ANTHROPIC_API_KEY
@@ -95,6 +101,7 @@ client<llm> AnthropicSonnet {
 
 client<llm> AnthropicOpus {
   provider anthropic
+  retry_policy Exponential
   options {
     model "claude-3-opus-latest"
     api_key env.ANTHROPIC_API_KEY
@@ -114,6 +121,7 @@ client<llm> AnthropicHaiku {
 
 client<llm> Gemini15Flash {
   provider google-ai
+  retry_policy Exponential
   options {
     model "gemini-1.5-flash"
     api_key env.GOOGLE_API_KEY
@@ -123,6 +131,7 @@ client<llm> Gemini15Flash {
 
 client<llm> Gemini15Pro {
   provider google-ai
+  retry_policy Exponential
   options {
     model "gemini-1.5-pro"
     api_key env.GOOGLE_API_KEY
@@ -132,6 +141,7 @@ client<llm> Gemini15Pro {
 
 client<llm> Gemini20FlashExp {
   provider google-ai
+  retry_policy Exponential
   options {
     model "gemini-2.0-flash-exp"
     api_key env.GOOGLE_API_KEY
@@ -141,6 +151,7 @@ client<llm> Gemini20FlashExp {
 
 client<llm> Gemini20FlashThinkingExp {
   provider google-ai
+  retry_policy Exponential
   options {
     model "gemini-2.0-flash-thinking-exp-01-21"
     api_key env.GOOGLE_API_KEY
