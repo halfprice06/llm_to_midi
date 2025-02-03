@@ -317,13 +317,14 @@ async def plan_and_generate_modular_song(theme: str) -> None:
             else:
                 section_plan_dict["description"] = f"Section {plan_section.label}"
 
-            # BAML call:
-            result = await async_b.GenerateOneSection(
+            # BAML call with streaming:
+            stream = async_b.stream.GenerateOneSection(
                 previousSections=previous_sections,
                 nextSectionPlan=section_plan_dict,
                 overallPlan=plan_dict,
                 theme=theme
             )
+            result = await stream.get_final_response()
 
             # Could come back as a dict or a JSON string. Handle both.
             if isinstance(result, str):
