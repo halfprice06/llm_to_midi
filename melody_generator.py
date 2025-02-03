@@ -54,11 +54,18 @@ class SectionPlan(BaseModel):
     label: str
     description: Optional[str]
     number_of_phrases: int
+    harmonic_direction: str
+    rhythmic_direction: str
+    melodic_direction: str
 
 class CompositionPlan(BaseModel):
     plan_title: str
     style: Optional[str]
     sections: List[SectionPlan]
+
+class CompositionPlanWithMetadata(BaseModel):
+    plan: CompositionPlan
+    metadata: SongMetadata
 
 class ModularPhrase(BaseModel):
     phrase_label: str
@@ -182,8 +189,6 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
             print(f"Warning: {voice_name} track has no valid notes after validation. Removing track.")
             del voices[voice_name]
 
-    has_percussion = "Percussion" in voices
-
     # 4) Create the MIDI file
     num_tracks = len(voices)  # Only create tracks for voices that have valid notes
     if num_tracks == 0:
@@ -285,9 +290,9 @@ async def plan_and_generate_modular_song(theme: str) -> None:
 
     print("\n==== Step 1: Generating the composition plan... ====")
     try:
-        plan: CompositionPlan = await async_b.GenerateCompositionPlan(theme=theme)
-        print("Successfully got CompositionPlan:")
-        print(json.dumps(plan.dict(), indent=2))
+        plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme)
+        print("Successfully got CompositionPlan with metadata:")
+        print(json.dumps(plan_with_metadata.dict(), indent=2))
     except Exception as e:
         print(f"Error generating composition plan: {e}")
         return
@@ -298,13 +303,13 @@ async def plan_and_generate_modular_song(theme: str) -> None:
     all_sections: List[ModularSection] = []
 
     # For each section in the plan, call GenerateOneSection
-    for idx, plan_section in enumerate(plan.sections):
+    for idx, plan_section in enumerate(plan_with_metadata.plan.sections):
         print(f"\n-- Generating Section #{idx+1}: {plan_section.label} --")
         try:
             # We pass along what we've generated so far for context
             previous_sections = [s.dict() for s in all_sections]  # convert to dict for BAML
             section_plan_dict = plan_section.dict()
-            plan_dict = plan.dict()
+            plan_dict = plan_with_metadata.dict()
 
             # Ensure section_description is set from the plan's description
             if plan_section.description:
@@ -339,23 +344,28 @@ async def plan_and_generate_modular_song(theme: str) -> None:
             print(f"Error generating section: {e}")
             return
 
-    # We now have the entire piece in all_sections. Next, we need the metadata.
-    # For demonstration, we'll guess or let the user pick metadata. Or we can guess from the plan.
-    # We'll put in a default instrumentation. The user can refine as needed.
+    # Create the final piece using the metadata from the plan
+    try:
+        # Parse the metadata from the plan
+        if isinstance(plan_with_metadata.metadata, dict):
+            metadata_dict = plan_with_metadata.metadata
+        else:
+            metadata_dict = plan_with_metadata.metadata.dict()
 
-    # Example metadata - you can adapt this or let the LLM do so in step one if desired:
-    default_metadata = SongMetadata(
-        title = plan.plan_title,
-        tempo = 120 if not plan.style else (90 if "ballad" in plan.style.lower() else 120),
-        key_signature = "C Major",  # or glean from plan/style
-        time_signature = "4/4",
-        instruments = Instrumentation(bass=32, tenor=48, alto=41, soprano=73)  # random example
-    )
+        # Create the SongMetadata object directly from the dictionary
+        metadata = SongMetadata.parse_obj(metadata_dict)
 
-    final_piece = ModularPiece(metadata=default_metadata, sections=all_sections)
+        final_piece = ModularPiece(
+            metadata=metadata,
+            sections=all_sections
+        )
 
-    # Step 3: Save the piece
-    save_modular_piece_to_midi(final_piece, theme, plan)
+        # Save the piece
+        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan)
+    except Exception as e:
+        print(f"Error creating final piece: {e}")
+        print("Raw metadata structure:", json.dumps(plan_with_metadata.metadata if isinstance(plan_with_metadata.metadata, dict) else plan_with_metadata.metadata.dict(), indent=2))
+        return
 
 # ------------------------------------------------------------------
 # 5) Optional: If you run this file directly, test with a sample theme

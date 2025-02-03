@@ -51,7 +51,7 @@ class BamlSyncClient:
         self,
         theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.CompositionPlan:
+    ) -> types.CompositionPlanWithMetadata:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -68,11 +68,11 @@ class BamlSyncClient:
         tb,
         __cr__,
       )
-      return cast(types.CompositionPlan, raw.cast_to(types, types, partial_types, False))
+      return cast(types.CompositionPlanWithMetadata, raw.cast_to(types, types, partial_types, False))
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlan,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
         baml_options: BamlCallOptions = {},
     ) -> types.ModularSection:
       __tb__ = baml_options.get("tb", None)
@@ -109,7 +109,7 @@ class BamlStreamClient:
         self,
         theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.CompositionPlan, types.CompositionPlan]:
+    ) -> baml_py.BamlSyncStream[partial_types.CompositionPlanWithMetadata, types.CompositionPlanWithMetadata]:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -128,16 +128,16 @@ class BamlStreamClient:
         __cr__,
       )
 
-      return baml_py.BamlSyncStream[partial_types.CompositionPlan, types.CompositionPlan](
+      return baml_py.BamlSyncStream[partial_types.CompositionPlanWithMetadata, types.CompositionPlanWithMetadata](
         raw,
-        lambda x: cast(partial_types.CompositionPlan, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.CompositionPlan, x.cast_to(types, types, partial_types, False)),
+        lambda x: cast(partial_types.CompositionPlanWithMetadata, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.CompositionPlanWithMetadata, x.cast_to(types, types, partial_types, False)),
         self.__ctx_manager.get(),
       )
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlan,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[partial_types.ModularSection, types.ModularSection]:
       __tb__ = baml_options.get("tb", None)

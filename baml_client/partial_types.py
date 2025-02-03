@@ -39,6 +39,10 @@ class CompositionPlan(BaseModel):
     style: Optional[str] = None
     sections: List["SectionPlan"]
 
+class CompositionPlanWithMetadata(BaseModel):
+    plan: Optional["CompositionPlan"] = None
+    metadata: Optional["SongMetadata"] = None
+
 class Instrumentation(BaseModel):
     bass: Optional[int] = None
     tenor: Optional[int] = None
@@ -76,6 +80,9 @@ class SectionPlan(BaseModel):
     label: Optional[str] = None
     description: Optional[str] = None
     number_of_phrases: Optional[int] = None
+    harmonic_direction: Optional[str] = None
+    rhythmic_direction: Optional[str] = None
+    melodic_direction: Optional[str] = None
 
 class SongMetadata(BaseModel):
     title: Optional[str] = None

@@ -33,12 +33,20 @@ class SectionPlan {
   label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
   description string? @description("Textual description for the section's role in the piece. Convey the style techniques, rhythms, harmonies and/or feelings the section is meant to evoke.")
   number_of_phrases int @description("How many phrases are planned in this section.")
+  harmonic_direction string @description("A textual description of the harmonic structure of the section. This should include the key, the chords, and ideas about how the various parts should interact with each other.")
+  rhythmic_direction string @description("A textual description of the rhythmic structure of the section. This should include the feel of the rhythm, the feel of the bass, the feel of the melody, the feel of the harmony, etc.")
+  melodic_direction string @description("A textual description of the melodic structure of the section. This should include the feel of the melody, the feel of the bass, the feel of the harmony, etc.")
 }
 
 class CompositionPlan {
   plan_title string @description("A short descriptive title for the composition plan.")
   style string? @description("Optional style or genre for the piece, e.g. 'classical waltz', 'jazz ballad', etc.")
   sections SectionPlan[] @description("A list of sections planned for the piece.")
+}
+
+class CompositionPlanWithMetadata {
+  plan CompositionPlan @description("The composition plan with sections and structure")
+  metadata SongMetadata @description("The song metadata including title, tempo, key signature, time signature and instruments")
 }
 
 class ModularPhrase {
@@ -71,27 +79,20 @@ class ModularPiece {
 // Functions
 /////////////////////////////
 
-function GenerateCompositionPlan(theme: string) -> CompositionPlan {
-  client "AnthropicSonnet"
+function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
+  client "HyperbolicDeepseekReasoner"
   prompt #"
-You are an expert music composer. The user wants to plan the structure of a piece
+You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
-
-
 
 They have asked for the following theme or instructions:
 
 "{{ theme }}"
 
-Return a JSON object that follows the schema (CompositionPlan) exactly:
+Return a JSON object that follows the schema (CompositionPlanWithMetadata) exactly:
 {{ ctx.output_format }}
 
-Guidelines for plan:
-- Provide a plan title (plan_title).
-- Specify a style or genre (style).
-- Provide a list of sections, each with a label, description, and how many phrases it should have.
-- The user wants to see the piece broken into any structure you see fit (intro, verse, chorus, coda, etc.).
-- Only describe the plan; do NOT generate note-level detail at this step.
+
 "#
 }
 
@@ -100,12 +101,13 @@ Guidelines for plan:
 function GenerateOneSection(
   previousSections: ModularSection[],
   nextSectionPlan: SectionPlan,
-  overallPlan: CompositionPlan,
+  overallPlan: CompositionPlanWithMetadata,
   theme: string
 ) -> ModularSection {
-  client "AnthropicSonnet"
+  client "HyperbolicDeepseekReasoner"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
+
 
 {{ overallPlan }}
 
@@ -177,6 +179,8 @@ But do not repeat them here; just create the next section and its phrases.
 Do not return any text other than the JSON object.
 
 Make sure to contrast busy sections or phrases with quieter ones.
+
+Please make sure that you craft beautiful melodies that are memorable in and of themselves. There should be a clear melody and theme the listener remembers from each section. Don't meander.
 
 "#
 }
