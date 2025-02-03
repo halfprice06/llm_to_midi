@@ -3,12 +3,27 @@ import json
 import os
 import datetime
 import asyncio
-from typing import List, Optional, Tuple, Dict
-from pydantic import BaseModel
+from typing import List, Optional, Tuple, Dict, Any
+from pydantic import BaseModel, Field
 from midiutil import MIDIFile
 from baml_client.async_client import b as async_b  # Import the async client
 
 print("Initializing melody generator...")
+
+def preprocess_section_json(section_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Preprocesses the section data to handle null percussion values before validation.
+    If percussion is null, removes it from the phrase entirely.
+    """
+    if not isinstance(section_data, dict):
+        return section_data
+        
+    if "phrases" in section_data and isinstance(section_data["phrases"], list):
+        for phrase in section_data["phrases"]:
+            if isinstance(phrase, dict) and "percussion" in phrase and phrase["percussion"] is None:
+                del phrase["percussion"]
+    
+    return section_data
 
 # ------------------------------------------------------------------
 # 1) Existing data models
@@ -47,21 +62,26 @@ class CompositionPlan(BaseModel):
 
 class ModularPhrase(BaseModel):
     phrase_label: str
+    phrase_description: str
+    lyrics: Optional[str]
     bass: List[NoteDuration]
     tenor: List[NoteDuration]
     alto: List[NoteDuration]
     soprano: List[NoteDuration]
     piano: List[NoteDuration]
-    percussion: Optional[List[NoteDuration]]
+    percussion: Optional[List[NoteDuration]] = Field(default=None)
 
 class ModularSection(BaseModel):
     section_label: str
+    section_description: str
+    harmonic_direction: str
+    rhythmic_direction: str
+    melodic_direction: str
     phrases: List[ModularPhrase]
 
 class ModularPiece(BaseModel):
     metadata: SongMetadata
     sections: List[ModularSection]
-
 
 # ------------------------------------------------------------------
 # 3) Helper functions to convert a ModularPiece to MIDI
@@ -115,7 +135,6 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
     Saves the given ModularPiece to:
       1) A MIDI file in 'outputs/<DATE> - <TIME>_<SAFE_THEME>/'
       2) A JSON log file in the same folder
-    Using naming conventions consistent with the older code.
 
     The MIDI file has multiple tracks:
       - Bass (track 0, channel 0)
@@ -125,6 +144,19 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
       - Piano (track 4, channel 4)
       - Percussion (track 5, channel 9) if present
     """
+
+    # Validate note durations before processing
+    def validate_notes(notes: List[NoteDuration], voice_name: str) -> List[NoteDuration]:
+        validated = []
+        for i, nd in enumerate(notes):
+            if nd.duration <= 0:
+                print(f"Warning: Found {voice_name} note at position {i} with invalid duration {nd.duration}. Skipping.")
+                continue
+            if nd.note is not None and (nd.note < 0 or nd.note > 127):
+                print(f"Warning: Found {voice_name} note at position {i} with invalid MIDI note number {nd.note}. Skipping.")
+                continue
+            validated.append(nd)
+        return validated
 
     # 1) Create the output folder (timestamped + sanitized theme)
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -142,10 +174,21 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
 
     # 3) Aggregate all notes in a dict of voice -> List[NoteDuration]
     voices = aggregate_modular_piece(piece)
+
+    # Validate all notes before proceeding
+    for voice_name in list(voices.keys()):
+        voices[voice_name] = validate_notes(voices[voice_name], voice_name)
+        if not voices[voice_name]:
+            print(f"Warning: {voice_name} track has no valid notes after validation. Removing track.")
+            del voices[voice_name]
+
     has_percussion = "Percussion" in voices
 
     # 4) Create the MIDI file
-    num_tracks = 6 if has_percussion else 5
+    num_tracks = len(voices)  # Only create tracks for voices that have valid notes
+    if num_tracks == 0:
+        raise ValueError("No valid notes found in any voice part after validation.")
+        
     midi_file = MIDIFile(num_tracks)
 
     # Add the tempo to each track
@@ -153,79 +196,91 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         midi_file.addTempo(i, 0, piece.metadata.tempo)
 
     # Program changes (instrumentation)
-    # Bass: track=0/channel=0, Tenor: track=1/channel=1, Alto:2, Soprano:3, Piano:4
     bass_prog = piece.metadata.instruments.bass
     tenor_prog = piece.metadata.instruments.tenor
     alto_prog = piece.metadata.instruments.alto
     soprano_prog = piece.metadata.instruments.soprano
     piano_prog = 0  # piano is always 0
 
-    midi_file.addProgramChange(0, 0, 0, bass_prog)
-    midi_file.addProgramChange(1, 1, 0, tenor_prog)
-    midi_file.addProgramChange(2, 2, 0, alto_prog)
-    midi_file.addProgramChange(3, 3, 0, soprano_prog)
-    midi_file.addProgramChange(4, 4, 0, piano_prog)
-    # Percussion does not need a program change (channel 9 for track #5)
+    # Track to channel mapping (excluding any removed voices)
+    track_info = []
+    if "Bass" in voices:
+        track_info.append(("Bass", 0, bass_prog))
+    if "Tenor" in voices:
+        track_info.append(("Tenor", 1, tenor_prog))
+    if "Alto" in voices:
+        track_info.append(("Alto", 2, alto_prog))
+    if "Soprano" in voices:
+        track_info.append(("Soprano", 3, soprano_prog))
+    if "Piano" in voices:
+        track_info.append(("Piano", 4, piano_prog))
+    if "Percussion" in voices:
+        track_info.append(("Percussion", 9, None))  # No program change for percussion
+
+    # Add program changes for each track
+    for i, (voice_name, channel, program) in enumerate(track_info):
+        if program is not None:  # Skip program change for percussion
+            midi_file.addProgramChange(i, channel, 0, program)
 
     # 5) Write out the notes for each voice
-    voice_order = ["Bass", "Tenor", "Alto", "Soprano", "Piano"]
-    if has_percussion:
-        voice_order.append("Percussion")
-
-    for i, voice_name in enumerate(voice_order):
-        channel = 9 if voice_name == "Percussion" else i  # channel 9 for percussion
+    for i, (voice_name, channel, _) in enumerate(track_info):
         time_pos = 0.0
         track_notes = voices[voice_name]
 
         for nd in track_notes:
             if nd.note is not None:
-                midi_file.addNote(
-                    track=i,
-                    channel=channel,
-                    pitch=nd.note,
-                    time=time_pos,
-                    duration=nd.duration,
-                    volume=100
-                )
+                try:
+                    midi_file.addNote(
+                        track=i,
+                        channel=channel,
+                        pitch=nd.note,
+                        time=time_pos,
+                        duration=max(0.1, nd.duration),  # Ensure minimum duration
+                        volume=100
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to add note in {voice_name} track at position {time_pos}: {e}")
             time_pos += nd.duration
 
     # 6) Save the MIDI file
     midi_filename = os.path.join(theme_folder, f"{base_filename}.mid")
     print(f"\nSaving MIDI file to: {midi_filename}")
     with open(midi_filename, "wb") as f_out:
-        midi_file.writeFile(f_out)
-    print("MIDI file saved successfully.")
+        try:
+            midi_file.writeFile(f_out)
+            print("MIDI file saved successfully.")
+        except Exception as e:
+            print(f"Error saving MIDI file: {e}")
+            raise
 
     # 7) Save the JSON log with the raw piece data
     piece_dict = piece.dict()
     log_filename = os.path.join(theme_folder, f"{base_filename}.json")
     print(f"Saving JSON log to: {log_filename}")
 
-    # You can add extra info if desired:
     piece_dict["generation_metadata"] = {
         "user_prompt": theme,
-        "model_used": "modular",  # or specify if you prefer
+        "model_used": "modular-stepwise",
         "timestamp": date_str + " " + time_str,
-        "composition_plan": plan.dict()  # Include the composition plan
+        "composition_plan": plan.dict()
     }
 
     with open(log_filename, "w", encoding="utf-8") as f_json:
         json.dump(piece_dict, f_json, indent=2)
     print("JSON log saved successfully.")
 
-
 # ------------------------------------------------------------------
-# 4) Example usage of the new plan + generate approach
+# 4) Stepwise generation: plan + generate each section
 # ------------------------------------------------------------------
 
 async def plan_and_generate_modular_song(theme: str) -> None:
     """
-    Example function that:
-      1) Calls the new BAML function to generate a CompositionPlan
-      2) Then calls the second BAML function to fill in the note details
-         as a ModularPiece
-      3) Saves the final piece to MIDI + JSON, using the naming conventions
-         from our older code
+    1) Calls BAML function to generate a CompositionPlan
+    2) Iterates through the plan sections one by one:
+       - For each section, calls the new BAML function GenerateOneSection
+         with the previously generated sections (for context).
+    3) Constructs the final piece from the incremental sections
+    4) Saves the piece to MIDI + JSON
     """
 
     print("\n==== Step 1: Generating the composition plan... ====")
@@ -237,34 +292,74 @@ async def plan_and_generate_modular_song(theme: str) -> None:
         print(f"Error generating composition plan: {e}")
         return
 
-    print("\n==== Step 2: Generating the final modular piece from plan... ====")
-    try:
-        piece_json = await async_b.GenerateModularSong(plan=plan, theme=theme)
-        # If we got a string, clean any C-style comments and parse
-        if isinstance(piece_json, str):
-            piece_json = remove_c_style_comments(piece_json)
-            piece = ModularPiece.parse_raw(piece_json)
-        # If we got a dict or BAML client's ModularPiece, convert to dict and parse
-        else:
-            # Convert to dict if it's not already one
-            if not isinstance(piece_json, dict):
-                piece_json = piece_json.dict()
-            piece = ModularPiece.parse_obj(piece_json)
-            
-        print("Successfully got final ModularPiece with notes:")
-        print(json.dumps(piece.dict(), indent=2))
-    except Exception as e:
-        print(f"Error generating final modular piece: {e}")
-        return
+    print("\n==== Step 2: Generating the final piece section-by-section... ====")
 
-    # Finally, save this piece to MIDI + JSON with old naming conventions
-    save_modular_piece_to_midi(piece, theme, plan)
+    # We'll accumulate the final sections in a list
+    all_sections: List[ModularSection] = []
 
+    # For each section in the plan, call GenerateOneSection
+    for idx, plan_section in enumerate(plan.sections):
+        print(f"\n-- Generating Section #{idx+1}: {plan_section.label} --")
+        try:
+            # We pass along what we've generated so far for context
+            previous_sections = [s.dict() for s in all_sections]  # convert to dict for BAML
+            section_plan_dict = plan_section.dict()
+            plan_dict = plan.dict()
+
+            # Ensure section_description is set from the plan's description
+            if plan_section.description:
+                section_plan_dict["description"] = plan_section.description
+            else:
+                section_plan_dict["description"] = f"Section {plan_section.label}"
+
+            # BAML call:
+            result = await async_b.GenerateOneSection(
+                previousSections=previous_sections,
+                nextSectionPlan=section_plan_dict,
+                overallPlan=plan_dict,
+                theme=theme
+            )
+
+            # Could come back as a dict or a JSON string. Handle both.
+            if isinstance(result, str):
+                result = remove_c_style_comments(result)
+                # Preprocess to handle null percussion before parsing
+                result_dict = json.loads(result)
+                processed_result = preprocess_section_json(result_dict)
+                generated_section = ModularSection.parse_obj(processed_result)
+            else:
+                # If it's already a dict, still preprocess it
+                processed_result = preprocess_section_json(result.dict())
+                generated_section = ModularSection.parse_obj(processed_result)
+
+            # Save to all_sections
+            all_sections.append(generated_section)
+            print(f"  Section '{generated_section.section_label}' generated with {len(generated_section.phrases)} phrases.")
+        except Exception as e:
+            print(f"Error generating section: {e}")
+            return
+
+    # We now have the entire piece in all_sections. Next, we need the metadata.
+    # For demonstration, we'll guess or let the user pick metadata. Or we can guess from the plan.
+    # We'll put in a default instrumentation. The user can refine as needed.
+
+    # Example metadata - you can adapt this or let the LLM do so in step one if desired:
+    default_metadata = SongMetadata(
+        title = plan.plan_title,
+        tempo = 120 if not plan.style else (90 if "ballad" in plan.style.lower() else 120),
+        key_signature = "C Major",  # or glean from plan/style
+        time_signature = "4/4",
+        instruments = Instrumentation(bass=32, tenor=48, alto=41, soprano=73)  # random example
+    )
+
+    final_piece = ModularPiece(metadata=default_metadata, sections=all_sections)
+
+    # Step 3: Save the piece
+    save_modular_piece_to_midi(final_piece, theme, plan)
 
 # ------------------------------------------------------------------
 # 5) Optional: If you run this file directly, test with a sample theme
 # ------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("\nNow testing the two-step modular composition approach...")
-    asyncio.run(plan_and_generate_modular_song("Create a jazzy piece with an intro and a chorus"))
+    asyncio.run(plan_and_generate_modular_song("Create a jazzy piece with an intro, verse, and ending"))

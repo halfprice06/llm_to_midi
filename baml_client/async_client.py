@@ -73,11 +73,11 @@ class BamlAsyncClient:
       )
       return cast(types.CompositionPlan, raw.cast_to(types, types, partial_types, False))
     
-    async def GenerateModularSong(
+    async def GenerateOneSection(
         self,
-        plan: types.CompositionPlan,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlan,theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.ModularPiece:
+    ) -> types.ModularSection:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -86,15 +86,15 @@ class BamlAsyncClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = await self.__runtime.call_function(
-        "GenerateModularSong",
+        "GenerateOneSection",
         {
-          "plan": plan,"theme": theme,
+          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,
         },
         self.__ctx_manager.get(),
         tb,
         __cr__,
       )
-      return cast(types.ModularPiece, raw.cast_to(types, types, partial_types, False))
+      return cast(types.ModularSection, raw.cast_to(types, types, partial_types, False))
     
 
 
@@ -137,11 +137,11 @@ class BamlStreamClient:
         self.__ctx_manager.get(),
       )
     
-    def GenerateModularSong(
+    def GenerateOneSection(
         self,
-        plan: types.CompositionPlan,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlan,theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[partial_types.ModularPiece, types.ModularPiece]:
+    ) -> baml_py.BamlStream[partial_types.ModularSection, types.ModularSection]:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -150,9 +150,11 @@ class BamlStreamClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = self.__runtime.stream_function(
-        "GenerateModularSong",
+        "GenerateOneSection",
         {
-          "plan": plan,
+          "previousSections": previousSections,
+          "nextSectionPlan": nextSectionPlan,
+          "overallPlan": overallPlan,
           "theme": theme,
         },
         None,
@@ -161,10 +163,10 @@ class BamlStreamClient:
         __cr__,
       )
 
-      return baml_py.BamlStream[partial_types.ModularPiece, types.ModularPiece](
+      return baml_py.BamlStream[partial_types.ModularSection, types.ModularSection](
         raw,
-        lambda x: cast(partial_types.ModularPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.ModularPiece, x.cast_to(types, types, partial_types, False)),
+        lambda x: cast(partial_types.ModularSection, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.ModularSection, x.cast_to(types, types, partial_types, False)),
         self.__ctx_manager.get(),
       )
     

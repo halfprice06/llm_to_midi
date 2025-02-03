@@ -31,7 +31,7 @@ class SongMetadata {
 
 class SectionPlan {
   label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
-  description string? @description("Textual description for the section's role in the piece.")
+  description string? @description("Textual description for the section's role in the piece. Convey the style techniques, rhythms, harmonies and/or feelings the section is meant to evoke.")
   number_of_phrases int @description("How many phrases are planned in this section.")
 }
 
@@ -43,6 +43,7 @@ class CompositionPlan {
 
 class ModularPhrase {
   phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
+  phrase_description string @description("A textual description of the content of the phrase. The kind of chords, the shape of the melody, the intensity, the rhythms, etc.")
   lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
   bass NoteDuration[] @description("Bass line - typically provides harmonic foundation with slower rhythmic movement, often using root notes and fifths")
   tenor NoteDuration[] @description("Tenor voice - provides inner harmony, can move in parallel or contrary motion with other voices, often harmonizes with alto")
@@ -54,7 +55,10 @@ class ModularPhrase {
 
 class ModularSection {
   section_label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
-  section_description string @description("Textual description for the section's role in the piece.")
+  section_description string @description("Textual description for the section's role in the piece. Convey the style techniques, rhythms, harmonies and/or feelings the section is meant to evoke.")
+  harmonic_direction string @description("A textual description of the harmonic structure of the section. This should include the key, the chords, and ideas about how the various parts should interact with each other.")
+  rhythmic_direction string @description("A textual description of the rhythmic structure of the section. This should include the feel of the rhythm, the feel of the bass, the feel of the melody, the feel of the harmony, etc.")
+  melodic_direction string @description("A textual description of the melodic structure of the section. This should include the feel of the melody, the feel of the bass, the feel of the harmony, etc.")
   phrases ModularPhrase[] @description("A list of phrases planned for this section.")
 }
 
@@ -63,11 +67,16 @@ class ModularPiece {
   sections ModularSection[]
 }
 
+/////////////////////////////
+// Functions
+/////////////////////////////
+
 function GenerateCompositionPlan(theme: string) -> CompositionPlan {
-  client "OpenAIo1"
+  client "AnthropicSonnet"
   prompt #"
 You are an expert music composer. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
+
 
 
 They have asked for the following theme or instructions:
@@ -86,43 +95,52 @@ Guidelines for plan:
 "#
 }
 
-function GenerateModularSong(plan: CompositionPlan, theme: string) -> ModularPiece {
-  client "OpenAIo1"
+
+// New function: GenerateOneSection
+function GenerateOneSection(
+  previousSections: ModularSection[],
+  nextSectionPlan: SectionPlan,
+  overallPlan: CompositionPlan,
+  theme: string
+) -> ModularSection {
+  client "AnthropicSonnet"
   prompt #"
-You are an expert composer well-versed in music theory. The user has already decided on the piece structure (sections, phrases) via the following plan:
+You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 
-{{ plan }}
+{{ overallPlan }}
 
-The user has also provided the following theme or instructions:
+The user also has requested the following theme:
+\"{{ theme }}\"
 
-"{{ theme }}"
+So far, we have completed the following sections:
 
-Now please fill in the actual note-level content for each section and each phrase.
+{{ previousSections }}
 
-Form:
-- Each section in 'plan.sections' must appear in the final output with a matching label
-- Follow the modular composition plan exactly
-- The final output must match the 'ModularPiece' schema:
+Now, generate the **next section** according to the plan:
 
-IMPORTANT OUTPUT REQUIREMENTS:
-- DO NOT include any comments in the output JSON (no /* ... */ style comments)
-- The output must be valid JSON that can be parsed directly
+{{ nextSectionPlan }}
+
+IMPORTANT REQUIREMENTS:
+
+- Do NOT include any comments in the JSON (no /* ... */).
+- Only generate this single next section (i.e. do not generate the entire piece or any other sections).
+- The new section must contain `phrases` with actual note-level detail in each part (bass, tenor, alto, soprano, piano, and optional percussion).
+- For the percussion field in each phrase:
+  - If you want percussion, include it as a non-empty list of NoteDuration objects
+  - If you don't want percussion, OMIT the field entirely (do not set it to null or empty list)
 
 Voices:
 - bass
 - tenor
 - alto
-- soprano 
-- piano
+- soprano
+- piano (instrument #0)
 - percussion (channel 10) - optional, only include if it fits the genre and style
 
 Instruments:
 - Choose appropriate MIDI instruments for bass, tenor, alto, and soprano voices
 - Piano voice is always instrument 0 (Acoustic Grand Piano)
 - Percussion track uses General MIDI drum map note numbers on channel 10
-
-Phrases:
-- A musical phrase is a series of many notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice phrases are often four bars or measures long culminating in a more or less definite cadence.
 
 Composition Guidelines:
 - Use varied rhythms for each part
@@ -148,51 +166,18 @@ Technical Requirements:
 - The metadata (title, tempo, key/time signatures) should be derived from the plan
 - Don't complain about the number of notes, just do your best.
 
-Remember to write a cohesive piece that follows the plan's structure. Do not complain about the number of notes - just do your best to create an interesting and musically sound composition.
+Title, tempo, key, etc. are found in overallPlan or you can infer them from prior sections. 
+But do not repeat them here; just create the next section and its phrases.
 
 - THIS IS THE MOST IMPORTANT INSTRUCTION. ENSURE VARIETY OF RHYTHMS AND COUNTERPOINT AMONG VOICES, LIMIT UNISON RHYTHMS.
 
-Output Format:
-
+- Return a JSON object matching the 'ModularSection' schema exactly:
 {{ ctx.output_format }}
 
-Do not return any commentary before or after the JSON output, only the JSON.
+Do not return any text other than the JSON object.
+
+Make sure to contrast busy sections or phrases with quieter ones.
+
 "#
 }
 
-
-test GenerateCompositionPlan {
-  functions [GenerateCompositionPlan]
-  args {
-    theme #"
-      Write Twinkle Twinkle Little Star in C
-    "#
-  }
-}
-
-test GenerateModularSong {
-  functions [GenerateModularSong]
-  args {
-    plan {
-      plan_title "Twinkle Twinkle Little Star - Traditional Arrangement"
-      style "Children's Folk Song"
-      sections [
-        {
-          label "A Section"
-          description "First melodic statement ('Twinkle twinkle little star, how I wonder what you are')"
-          number_of_phrases 2
-        }
-        {
-          label "B Section" 
-          description "Middle contrasting section ('Up above the world so high, like a diamond in the sky')"
-          number_of_phrases 2
-        }
-        {
-          label "A' Section"
-          description "Return to main melody ('Twinkle twinkle little star, how I wonder what you are')"
-          number_of_phrases 2
-        }
-      ]
-    }
-  }
-}
