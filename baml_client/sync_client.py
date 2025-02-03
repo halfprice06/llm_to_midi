@@ -72,7 +72,7 @@ class BamlSyncClient:
     
     def GenerateModularSong(
         self,
-        plan: types.CompositionPlan,
+        plan: types.CompositionPlan,theme: str,
         baml_options: BamlCallOptions = {},
     ) -> types.ModularPiece:
       __tb__ = baml_options.get("tb", None)
@@ -85,7 +85,7 @@ class BamlSyncClient:
       raw = self.__runtime.call_function_sync(
         "GenerateModularSong",
         {
-          "plan": plan,
+          "plan": plan,"theme": theme,
         },
         self.__ctx_manager.get(),
         tb,
@@ -137,7 +137,7 @@ class BamlStreamClient:
     
     def GenerateModularSong(
         self,
-        plan: types.CompositionPlan,
+        plan: types.CompositionPlan,theme: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[partial_types.ModularPiece, types.ModularPiece]:
       __tb__ = baml_options.get("tb", None)
@@ -151,6 +151,7 @@ class BamlStreamClient:
         "GenerateModularSong",
         {
           "plan": plan,
+          "theme": theme,
         },
         None,
         self.__ctx_manager.get(),

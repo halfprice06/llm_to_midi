@@ -47,6 +47,7 @@ class Instrumentation(BaseModel):
 
 class ModularPhrase(BaseModel):
     phrase_label: Optional[str] = None
+    lyrics: Optional[str] = None
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
     alto: List["NoteDuration"]

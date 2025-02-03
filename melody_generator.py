@@ -67,6 +67,17 @@ class ModularPiece(BaseModel):
 # 3) Helper functions to convert a ModularPiece to MIDI
 # ------------------------------------------------------------------
 
+def remove_c_style_comments(json_str: str) -> str:
+    """
+    Removes C-style comments (/* ... */) from a JSON string.
+    This is needed because sometimes the LLM includes explanatory comments
+    which break JSON parsing.
+    """
+    import re
+    # Remove multi-line comments
+    json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+    return json_str
+
 def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[NoteDuration]]:
     """
     Aggregates all voice lines from each section/phrase into
@@ -228,7 +239,18 @@ async def plan_and_generate_modular_song(theme: str) -> None:
 
     print("\n==== Step 2: Generating the final modular piece from plan... ====")
     try:
-        piece: ModularPiece = await async_b.GenerateModularSong(plan=plan)
+        piece_json = await async_b.GenerateModularSong(plan=plan, theme=theme)
+        # If we got a string, clean any C-style comments and parse
+        if isinstance(piece_json, str):
+            piece_json = remove_c_style_comments(piece_json)
+            piece = ModularPiece.parse_raw(piece_json)
+        # If we got a dict or BAML client's ModularPiece, convert to dict and parse
+        else:
+            # Convert to dict if it's not already one
+            if not isinstance(piece_json, dict):
+                piece_json = piece_json.dict()
+            piece = ModularPiece.parse_obj(piece_json)
+            
         print("Successfully got final ModularPiece with notes:")
         print(json.dumps(piece.dict(), indent=2))
     except Exception as e:

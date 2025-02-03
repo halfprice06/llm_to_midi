@@ -42,7 +42,8 @@ class CompositionPlan {
 }
 
 class ModularPhrase {
-  phrase_label string
+  phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
+  lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
   bass NoteDuration[]
   tenor NoteDuration[]
   alto NoteDuration[]
@@ -62,48 +63,103 @@ class ModularPiece {
 }
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlan {
-  client "OpenAIo1"
+  client "Gemini15Pro"
   prompt #"
 You are an expert music composer. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
 
+
+
 They have asked for the following theme or instructions:
-{{ theme }}
+
+"{{ theme }}"
 
 Return a JSON object that follows the schema (CompositionPlan) exactly:
 {{ ctx.output_format }}
 
 Guidelines for plan:
 - Provide a plan title (plan_title).
-- Optionally specify a style or genre (style).
-- Provide a list of sections, each with a label, optional description, and how many phrases it should have.
+- Specify a style or genre (style).
+- Provide a list of sections, each with a label, description, and how many phrases it should have.
 - The user wants to see the piece broken into any structure you see fit (intro, verse, chorus, coda, etc.).
 - Only describe the plan; do NOT generate note-level detail at this step.
 "#
 }
 
-function GenerateModularSong(plan: CompositionPlan) -> ModularPiece {
-  client "OpenAIo1"
+function GenerateModularSong(plan: CompositionPlan, theme: string) -> ModularPiece {
+  client "Gemini15Pro"
   prompt #"
-You are an expert composer. A user has already decided on the piece structure (sections, phrases) via the following plan:
+You are an expert composer well-versed in music theory. The user has already decided on the piece structure (sections, phrases) via the following plan:
+
 {{ plan }}
+
+The user has also provided the following theme or instructions:
+
+"{{ theme }}"
 
 Now please fill in the actual note-level content for each section and each phrase.
 
-Requirements / guidelines:
-- Each section in 'plan.sections' must appear in the final output with a matching label.
-- For each planned phrase, generate enough note-level detail in the voices (bass, tenor, alto, soprano, piano, and optionally percussion).
-- The final output must match the 'ModularPiece' schema exactly:
+Form:
+- Each section in 'plan.sections' must appear in the final output with a matching label
+- Follow the modular composition plan exactly
+- The final output must match the 'ModularPiece' schema:
+
+IMPORTANT OUTPUT REQUIREMENTS:
+- DO NOT include any comments in the output JSON (no /* ... */ style comments)
+- The output must be valid JSON that can be parsed directly
+
+Voices:
+- bass
+- tenor
+- alto
+- soprano 
+- piano
+- percussion (channel 10) - optional, only include if it fits the genre and style
+
+Instruments:
+- Choose appropriate MIDI instruments for bass, tenor, alto, and soprano voices
+- Piano voice is always instrument 0 (Acoustic Grand Piano)
+- Percussion track uses General MIDI drum map note numbers on channel 10
+
+Phrases:
+- A musical phrase is a series of many notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice phrases are often four bars or measures long culminating in a more or less definite cadence.
+
+Composition Guidelines:
+- Use varied rhythms for each part
+- Keep each part coherent, with independent but harmonically compatible lines
+- Use good voice leading between parts, avoid parallel fifths and octaves
+- Write interesting motifs and follow rules of Western tonality and music theory
+- Ensure variety between phrases
+- Parts may rest at times to give other parts a chance to shine and the listeners ears a break
+- Use piano and/or percussion track to provide rhythmic foundation if appropriate for genre
+
+Technical Requirements:
+- Make phrases extremely long and interesting
+- Use MIDI note numbers:
+  - For melodic parts (60 = middle C)
+  - For percussion (35 = bass drum, 38 = snare, 42 = closed hi-hat, etc.)
+  - null indicates a rest
+- Duration is in beats (1.0 = quarter note, 0.5 = eighth note, 0.25 = sixteenth note, 0.125 = thirty-second note, etc.)
+- End long phrases with interesting cadences or long notes
+- Ensure variety of rhythms and counterpoint among voices, limit unison rhythms
+- Use piano to keep beat and add interest (e.g. arpeggiated chords)
+- Use percussion to enhance rhythm and groove, but only if it fits the genre
+- Omit percussion for delicate pieces where it wouldn't fit (e.g. nocturne)
+- The metadata (title, tempo, key/time signatures) should be derived from the plan
+- Don't complain about the number of notes, just do your best.
+
+Remember to write a cohesive piece that follows the plan's structure. Do not complain about the number of notes - just do your best to create an interesting and musically sound composition.
+
+- THIS IS THE MOST IMPORTANT INSTRUCTION. ENSURE VARIETY OF RHYTHMS AND COUNTERPOINT AMONG VOICES, LIMIT UNISON RHYTHMS.
+
+Output Format:
 
 {{ ctx.output_format }}
 
-Notes:
-- Use valid MIDI note numbers (0..127), or null for rests.
-- For percussion (channel 10), use the typical GM drum note numbers (35, 36, 38, 42, etc.) if applicable.
-- The 'metadata' can be guessed or derived from the plan. Provide a creative title, a tempo, a key signature, time signature, etc.
-- The user wants a cohesive piece but with the plan's structure.
+Do not return any commentary before or after the JSON output, only the JSON.
 "#
 }
+
 
 test GenerateCompositionPlan {
   functions [GenerateCompositionPlan]
