@@ -61,6 +61,7 @@ class ModularPiece(BaseModel):
 
 class ModularSection(BaseModel):
     section_label: Optional[str] = None
+    section_description: Optional[str] = None
     phrases: List["ModularPhrase"]
 
 class NoteDuration(BaseModel):

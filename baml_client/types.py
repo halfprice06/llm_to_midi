@@ -66,6 +66,7 @@ class ModularPiece(BaseModel):
 
 class ModularSection(BaseModel):
     section_label: str
+    section_description: str
     phrases: List["ModularPhrase"]
 
 class NoteDuration(BaseModel):

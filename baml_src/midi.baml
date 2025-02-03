@@ -44,17 +44,18 @@ class CompositionPlan {
 class ModularPhrase {
   phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
   lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
-  bass NoteDuration[]
-  tenor NoteDuration[]
-  alto NoteDuration[]
-  soprano NoteDuration[]
-  piano NoteDuration[]
-  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers")
+  bass NoteDuration[] @description("Bass line - typically provides harmonic foundation with slower rhythmic movement, often using root notes and fifths")
+  tenor NoteDuration[] @description("Tenor voice - provides inner harmony, can move in parallel or contrary motion with other voices, often harmonizes with alto")
+  alto NoteDuration[] @description("Alto voice - middle voice that helps fill out harmonies, frequently moves in parallel thirds with soprano or tenor")
+  soprano NoteDuration[] @description("Soprano/lead voice - carries the main melody, typically has the highest pitch and most prominent melodic movement")
+  piano NoteDuration[] @description("Piano part - can provide harmonic support, melodic lines, or both through a combination of chords and melodic passages. Arpeggios work well here.")
+  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers for rhythmic accompaniment")
 }
 
 class ModularSection {
   section_label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
-  phrases ModularPhrase[] @description("")
+  section_description string @description("Textual description for the section's role in the piece.")
+  phrases ModularPhrase[] @description("A list of phrases planned for this section.")
 }
 
 class ModularPiece {
@@ -63,11 +64,10 @@ class ModularPiece {
 }
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlan {
-  client "Gemini15Pro"
+  client "OpenAIo1"
   prompt #"
 You are an expert music composer. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
-
 
 
 They have asked for the following theme or instructions:
@@ -87,7 +87,7 @@ Guidelines for plan:
 }
 
 function GenerateModularSong(plan: CompositionPlan, theme: string) -> ModularPiece {
-  client "Gemini15Pro"
+  client "OpenAIo1"
   prompt #"
 You are an expert composer well-versed in music theory. The user has already decided on the piece structure (sections, phrases) via the following plan:
 
