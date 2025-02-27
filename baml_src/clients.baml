@@ -48,6 +48,18 @@ client<llm> OpenAIGPT4o {
   }
 }
 
+client<llm> OpenAI45 {
+  provider openai
+  retry_policy Exponential
+
+  options {
+    temperature 1
+    model "gpt-4.5-preview"
+    api_key env.OPENAI_API_KEY
+
+  }
+}
+
 
 client<llm> HyperbolicDeepseekReasoner {
   provider openai-generic
@@ -92,7 +104,7 @@ client<llm> AnthropicSonnet {
   provider anthropic
   retry_policy Exponential
   options {
-    model "claude-3-5-sonnet-latest"
+    model "claude-3-7-sonnet-latest"
     api_key env.ANTHROPIC_API_KEY
     temperature 1
   }
@@ -157,6 +169,24 @@ client<llm> Gemini20FlashThinkingExp {
     api_key env.GOOGLE_API_KEY
   }
 
+}
+
+client<llm> Gemini20ProExp {
+  provider google-ai
+  retry_policy Exponential
+  options {
+    model "gemini-2.0-pro-exp-02-05"
+    api_key env.GOOGLE_API_KEY
+  }
+}
+
+client<llm> Gemini20FlashLitePreview {
+  provider google-ai
+  retry_policy Exponential
+  options {
+    model "gemini-2.0-flash-lite-preview-02-05"
+    api_key env.GOOGLE_API_KEY
+  }
 }
 
 

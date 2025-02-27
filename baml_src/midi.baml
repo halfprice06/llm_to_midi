@@ -80,7 +80,7 @@ class ModularPiece {
 /////////////////////////////
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
-  client "AnthropicSonnet"
+  client "OpenAI45"
   prompt #"
 You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
@@ -105,7 +105,7 @@ function GenerateOneSection(
   overallPlan: CompositionPlanWithMetadata,
   theme: string
 ) -> ModularSection {
-  client "AnthropicSonnet"
+  client "OpenAI45"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 

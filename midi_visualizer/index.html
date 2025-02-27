@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web MIDI Player with 3D Visualization</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #000; /* Changed to black for better particle visibility */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      overflow: hidden; /* Prevent scrollbars */
+    }
+    #drop-zone {
+      width: 60%;
+      margin: 20px;
+      padding: 40px;
+      border: 3px dashed #444;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      transition: 0.3s;
+      cursor: pointer;
+      position: absolute;
+      top: 0;
+      z-index: 1000;
+    }
+    #drop-zone.hover {
+      border-color: #888;
+      background: rgba(0, 0, 0, 0.7);
+    }
+    #controls {
+      margin: 10px;
+      position: absolute;
+      top: 150px;
+      z-index: 1000;
+    }
+    #play-btn, #pause-btn {
+      margin-right: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #444;
+      color: #fff;
+      transition: 0.3s;
+    }
+    #play-btn:hover, #pause-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    #play-btn:disabled, #pause-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #status {
+      margin: 10px;
+      color: #888;
+      position: absolute;
+      top: 200px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Drag-and-drop area -->
+  <div id="drop-zone">🎵 Drag & drop a MIDI file here 🎵</div>
+
+  <!-- Playback controls -->
+  <div id="controls">
+    <button id="play-btn" disabled>Play</button>
+    <button id="pause-btn" disabled>Pause</button>
+  </div>
+  
+  <!-- Status display -->
+  <div id="status">Status: Initializing...</div>
+
+  <!-- Import map for Three.js modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+        "three/examples/jsm/postprocessing/EffectComposer.js": "https://unpkg.com/three@0.150.0/examples/jsm/postprocessing/EffectComposer.js",
+        "three/examples/jsm/postprocessing/RenderPass.js": "https://unpkg.com/three@0.150.0/examples/jsm/postprocessing/RenderPass.js",
+        "three/examples/jsm/postprocessing/UnrealBloomPass.js": "https://unpkg.com/three@0.150.0/examples/jsm/postprocessing/UnrealBloomPass.js"
+      }
+    }
+  </script>
+  
+  <!-- Tone.js library -->
+  <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+  <!-- MIDI File Parser -->
+  <script src="https://unpkg.com/@tonejs/midi"></script>
+
+  <!-- Your main app script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
