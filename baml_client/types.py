@@ -86,6 +86,7 @@ class SectionPlan(BaseModel):
     label: str
     description: Optional[str] = None
     number_of_phrases: int
+    measures_per_phrase: int
     harmonic_direction: str
     rhythmic_direction: str
     melodic_direction: str

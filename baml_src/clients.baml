@@ -1,5 +1,17 @@
 // Learn more about clients at https://docs.boundaryml.com/docs/snippets/clients/overview
 
+client<llm> OpenAIGPT45 {
+  provider openai
+  retry_policy Exponential
+
+  options {
+    temperature 1
+    model "gpt-4.5-latest"
+    api_key env.OPENAI_API_KEY
+
+  }
+}
+
 client<llm> OpenAIo1 {
   provider openai
   retry_policy Exponential
@@ -88,11 +100,22 @@ client<llm> DeepseekReasoner {
 }
 
 
-client<llm> AnthropicSonnet {
+client<llm> AnthropicSonnet35 {
   provider anthropic
   retry_policy Exponential
   options {
     model "claude-3-5-sonnet-latest"
+    api_key env.ANTHROPIC_API_KEY
+    temperature 1
+  }
+
+}
+
+client<llm> AnthropicSonnet37 {
+  provider anthropic
+  retry_policy Exponential
+  options {
+    model "claude-3-7-sonnet-latest"
     api_key env.ANTHROPIC_API_KEY
     temperature 1
   }

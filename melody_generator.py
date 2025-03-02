@@ -94,6 +94,17 @@ class ModularPiece(BaseModel):
 # 3) Helper functions to convert a ModularPiece to MIDI
 # ------------------------------------------------------------------
 
+def get_beats_per_measure(time_signature: str) -> float:
+    try:
+        numerator, denominator = map(int, time_signature.split('/'))
+        # Assuming beat = quarter note (1.0 in NoteDuration)
+        # Beats per measure = numerator * (4 / denominator)
+        # Examples: '4/4' -> 4 beats, '3/4' -> 3 beats, '6/8' -> 3 beats (6 eighth notes = 3 quarter notes)
+        return numerator * (4 / denominator)
+    except Exception as e:
+        print(f"Error parsing time signature '{time_signature}': {e}")
+        return 4.0  # Default to 4 beats per measure
+
 def remove_c_style_comments(json_str: str) -> str:
     """
     Removes C-style comments (/* ... */) from a JSON string.
@@ -279,15 +290,6 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
 # ------------------------------------------------------------------
 
 async def plan_and_generate_modular_song(theme: str) -> None:
-    """
-    1) Calls BAML function to generate a CompositionPlan
-    2) Iterates through the plan sections one by one:
-       - For each section, calls the new BAML function GenerateOneSection
-         with the previously generated sections (for context).
-    3) Constructs the final piece from the incremental sections
-    4) Saves the piece to MIDI + JSON
-    """
-
     print("\n==== Step 1: Generating the composition plan... ====")
     try:
         plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme)
@@ -298,74 +300,73 @@ async def plan_and_generate_modular_song(theme: str) -> None:
         return
 
     print("\n==== Step 2: Generating the final piece section-by-section... ====")
-
-    # We'll accumulate the final sections in a list
     all_sections: List[ModularSection] = []
 
-    # For each section in the plan, call GenerateOneSection
+    beats_per_measure = get_beats_per_measure(plan_with_metadata.metadata.time_signature)
+
     for idx, plan_section in enumerate(plan_with_metadata.plan.sections):
         print(f"\n-- Generating Section #{idx+1}: {plan_section.label} --")
         try:
-            # We pass along what we've generated so far for context
-            previous_sections = [s.dict() for s in all_sections]  # convert to dict for BAML
+            previous_sections = [s.dict() for s in all_sections]
             section_plan_dict = plan_section.dict()
             plan_dict = plan_with_metadata.dict()
 
-            # Ensure section_description is set from the plan's description
             if plan_section.description:
                 section_plan_dict["description"] = plan_section.description
             else:
                 section_plan_dict["description"] = f"Section {plan_section.label}"
 
-            # BAML call with streaming:
+            # Calculate total duration per phrase
+            total_duration_per_phrase = plan_section.measures_per_phrase * beats_per_measure
+
             stream = async_b.stream.GenerateOneSection(
                 previousSections=previous_sections,
                 nextSectionPlan=section_plan_dict,
                 overallPlan=plan_dict,
-                theme=theme
+                theme=theme,
+                total_duration_per_phrase=total_duration_per_phrase
             )
             result = await stream.get_final_response()
-
-            # Could come back as a dict or a JSON string. Handle both.
-            if isinstance(result, str):
+            if result is None:
+                raise ValueError("Stream returned None instead of a string or dict")
+            elif isinstance(result, str):
                 result = remove_c_style_comments(result)
-                # Preprocess to handle null percussion before parsing
                 result_dict = json.loads(result)
                 processed_result = preprocess_section_json(result_dict)
                 generated_section = ModularSection.parse_obj(processed_result)
-            else:
-                # If it's already a dict, still preprocess it
+            elif hasattr(result, 'dict'):
                 processed_result = preprocess_section_json(result.dict())
                 generated_section = ModularSection.parse_obj(processed_result)
+            else:
+                raise TypeError(f"Unexpected result type: {type(result)}")
 
-            # Save to all_sections
+            # Validation
+            for phrase in generated_section.phrases:
+                for voice_name in ["bass", "tenor", "alto", "soprano", "piano", "percussion"]:
+                    notes = getattr(phrase, voice_name, None)  # Default to None if voice_name doesn't exist
+                    if notes is not None:  # Only process if notes is not None
+                        total_duration = sum(nd.duration for nd in notes)
+                        if abs(total_duration - total_duration_per_phrase) > 0.01:
+                            print(f"Warning: Phrase '{phrase.phrase_label}' {voice_name} total duration {total_duration} does not match required {total_duration_per_phrase}")
+                        
             all_sections.append(generated_section)
             print(f"  Section '{generated_section.section_label}' generated with {len(generated_section.phrases)} phrases.")
         except Exception as e:
             print(f"Error generating section: {e}")
             return
 
-    # Create the final piece using the metadata from the plan
+    # Final piece creation and saving (unchanged)
     try:
-        # Parse the metadata from the plan
-        if isinstance(plan_with_metadata.metadata, dict):
-            metadata_dict = plan_with_metadata.metadata
-        else:
-            metadata_dict = plan_with_metadata.metadata.dict()
-
-        # Create the SongMetadata object directly from the dictionary
-        metadata = SongMetadata.parse_obj(metadata_dict)
-
-        final_piece = ModularPiece(
-            metadata=metadata,
-            sections=all_sections
-        )
-
-        # Save the piece
+        metadata = SongMetadata.parse_obj(plan_with_metadata.metadata.dict())
+        print("All sections generated, aggregating piece...")
+        final_piece = ModularPiece(metadata=metadata, sections=all_sections)
+        print("Piece aggregated, saving to MIDI...")
         save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan)
+        print("MIDI saved successfully.")
     except Exception as e:
         print(f"Error creating final piece: {e}")
-        print("Raw metadata structure:", json.dumps(plan_with_metadata.metadata if isinstance(plan_with_metadata.metadata, dict) else plan_with_metadata.metadata.dict(), indent=2))
+        import traceback
+        traceback.print_exc()
         return
 
 # ------------------------------------------------------------------

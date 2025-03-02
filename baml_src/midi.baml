@@ -28,11 +28,11 @@ class SongMetadata {
 // NEW: Flexible modular design
 /////////////////////////////
 
-
 class SectionPlan {
   label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
   description string? @description("Textual description for the section's role in the piece. Convey the style techniques, rhythms, harmonies and/or feelings the section is meant to evoke.")
   number_of_phrases int @description("How many phrases are planned in this section.")
+  measures_per_phrase int @description("Number of measures each phrase in this section should have")
   harmonic_direction string @description("A textual description of the harmonic structure of the section. This should include the key, the chords, and ideas about how the various parts should interact with each other.")
   rhythmic_direction string @description("A textual description of the rhythmic structure of the section. This should include the feel of the rhythm, the feel of the bass, the feel of the melody, the feel of the harmony, etc.")
   melodic_direction string @description("A textual description of the melodic structure of the section. This should include the feel of the melody, the feel of the bass, the feel of the harmony, etc.")
@@ -80,7 +80,7 @@ class ModularPiece {
 /////////////////////////////
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
-  client "Gemini20FlashExp"
+  client "AnthropicSonnet37"
   prompt #"
 You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
@@ -103,9 +103,10 @@ function GenerateOneSection(
   previousSections: ModularSection[],
   nextSectionPlan: SectionPlan,
   overallPlan: CompositionPlanWithMetadata,
-  theme: string
+  theme: string,
+  total_duration_per_phrase: float
 ) -> ModularSection {
-  client "Gemini20FlashExp"
+  client "AnthropicSonnet37"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 
@@ -154,7 +155,9 @@ Composition Guidelines:
 - Use piano and/or percussion track to provide rhythmic foundation if appropriate for genre
 
 Technical Requirements:
-- Make phrases extremely long and interesting
+- Each phrase must have a total duration of exactly {{ total_duration_per_phrase }} beats for each voice.
+- Ensure that the sum of the durations in each voice's note list (bass, tenor, alto, soprano, piano, and percussion if present) equals exactly {{ total_duration_per_phrase }}.
+- For example, if total_duration_per_phrase is 16.0, then each voice should have notes whose durations sum to 16.0 beats.
 - Use MIDI note numbers:
   - For melodic parts (60 = middle C)
   - For percussion (35 = bass drum, 38 = snare, 42 = closed hi-hat, etc.)
@@ -184,4 +187,3 @@ Please make sure that you craft beautiful melodies that are memorable in and of 
 
 "#
 }
-

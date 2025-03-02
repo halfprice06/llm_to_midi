@@ -80,6 +80,7 @@ class SectionPlan(BaseModel):
     label: Optional[str] = None
     description: Optional[str] = None
     number_of_phrases: Optional[int] = None
+    measures_per_phrase: Optional[int] = None
     harmonic_direction: Optional[str] = None
     rhythmic_direction: Optional[str] = None
     melodic_direction: Optional[str] = None

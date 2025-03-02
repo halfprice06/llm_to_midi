@@ -72,7 +72,7 @@ class BamlSyncClient:
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,
         baml_options: BamlCallOptions = {},
     ) -> types.ModularSection:
       __tb__ = baml_options.get("tb", None)
@@ -85,7 +85,7 @@ class BamlSyncClient:
       raw = self.__runtime.call_function_sync(
         "GenerateOneSection",
         {
-          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,
+          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,"total_duration_per_phrase": total_duration_per_phrase,
         },
         self.__ctx_manager.get(),
         tb,
@@ -137,7 +137,7 @@ class BamlStreamClient:
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[partial_types.ModularSection, types.ModularSection]:
       __tb__ = baml_options.get("tb", None)
@@ -154,6 +154,7 @@ class BamlStreamClient:
           "nextSectionPlan": nextSectionPlan,
           "overallPlan": overallPlan,
           "theme": theme,
+          "total_duration_per_phrase": total_duration_per_phrase,
         },
         None,
         self.__ctx_manager.get(),
