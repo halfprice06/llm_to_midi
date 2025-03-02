@@ -101,7 +101,7 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
     def validate_notes(notes: List[NoteDuration], voice_name: str) -> List[NoteDuration]:
         validated = []
         for i, nd in enumerate(notes):
-            if nd.duration <= 0:
+            if Fraction(nd.duration) <= 0:
                 print(f"Warning: Found {voice_name} note at position {i} with invalid duration {nd.duration}. Skipping.")
                 continue
             if nd.note is not None and (nd.note < 0 or nd.note > 127):
@@ -178,20 +178,20 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         track_notes = voices[voice_name]
 
         for nd in track_notes:
+            duration_float = float(Fraction(nd.duration))  # Convert "1/2" to 0.5
             if nd.note is not None:
                 try:
-                    duration_float = float(Fraction(nd.duration))
                     midi_file.addNote(
                         track=i,
                         channel=channel,
                         pitch=nd.note,
                         time=time_pos,
-                        duration=max(0.1, duration_float),  # Ensure minimum duration
+                        duration=max(0.1, duration_float),
                         volume=100
                     )
                 except Exception as e:
                     print(f"Warning: Failed to add note in {voice_name} track at position {time_pos}: {e}")
-            time_pos += float(Fraction(nd.duration))
+            time_pos += duration_float  # Increment time using the float value
 
     # 6) Save the MIDI file
     midi_filename = os.path.join(theme_folder, f"{base_filename}.mid")

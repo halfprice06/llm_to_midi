@@ -85,7 +85,7 @@ class ModularPiece {
 /////////////////////////////
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
-  client "AnthropicSonnet37"
+  client "HyperbolicDeepseekV3"
   prompt #"
 You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
@@ -112,7 +112,7 @@ function GenerateOneSection(
   total_duration_per_phrase: float,
   beats_per_measure: float
 ) -> ModularSection {
-  client "AnthropicSonnet37"
+  client "HyperbolicDeepseekV3"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 
@@ -146,9 +146,6 @@ IMPORTANT REQUIREMENTS:
 - Keep each measure self-contained; notes should not span across measures.
 - Use rests (note: null) to fill measures if needed.
 - Durations must be strings representing fractions (e.g., '1/2', '1/3', '1').
-- Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
-
-**Technical Details:**
 - Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
 
 Voices:
@@ -203,6 +200,13 @@ Do not return any text other than the JSON object.
 Make sure to contrast busy sections or phrases with quieter ones.
 
 Please make sure that you craft beautiful melodies that are memorable in and of themselves. There should be a clear melody and theme the listener remembers from each section. Don't meander.
+
+Don't forget: 
+
+- Each phrase must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
+- Each measure must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
+- Total duration per voice in the phrase must be {{ total_duration_per_phrase }} beats.
+- Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
 
 "#
 }
