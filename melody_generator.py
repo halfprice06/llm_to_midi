@@ -4,11 +4,10 @@ import os
 import datetime
 import asyncio
 from typing import List, Optional, Tuple, Dict, Any
-from pydantic import BaseModel, Field
 from midiutil import MIDIFile
 from fractions import Fraction
 from baml_client.async_client import b as async_b  # Import the async client
-from baml_client.types import NoteDuration, Measure, ModularPhrase, ModularSection, Instrumentation, SongMetadata, SectionPlan, CompositionPlan, CompositionPlanWithMetadata, ModularPiece
+from baml_client.types import NoteDuration, Measure, Phrase, Section, Instrumentation, SongMetadata, SectionPlan, CompositionPlan, CompositionPlanWithMetadata, ModularPiece
 from baml_py import ClientRegistry  # Import ClientRegistry
 
 print("Initializing melody generator...")
@@ -116,13 +115,23 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
     def validate_notes(notes: List[Tuple[float, NoteDuration]], voice_name: str) -> List[Tuple[float, NoteDuration]]:
         validated = []
         for start, nd in notes:
-            if Fraction(nd.duration) <= 0:
-                print(f"Warning: Found {voice_name} note at start {start} with invalid duration {nd.duration}. Skipping.")
+            try:
+                # Convert duration to float and validate
+                duration_float = float(Fraction(nd.duration))
+                if duration_float <= 0:
+                    print(f"Warning: Found {voice_name} note at start {start} with invalid duration {nd.duration}. Skipping.")
+                    continue
+                if nd.note is not None and (nd.note < 0 or nd.note > 127):
+                    print(f"Warning: Found {voice_name} note at start {start} with invalid MIDI note number {nd.note}. Skipping.")
+                    continue
+                # Ensure duration is reasonable to prevent MIDI library issues
+                if duration_float > 16:  # Limit to 4 measures in 4/4 time as a safe maximum
+                    print(f"Warning: Found {voice_name} note at start {start} with unusually long duration {duration_float}. Truncating to 16 beats.")
+                    duration_float = 16
+                validated.append((start, NoteDuration(note=nd.note, duration=str(duration_float))))
+            except Exception as e:
+                print(f"Warning: Error processing {voice_name} note at {start}: {e}. Skipping.")
                 continue
-            if nd.note is not None and (nd.note < 0 or nd.note > 127):
-                print(f"Warning: Found {voice_name} note at start {start} with invalid MIDI note number {nd.note}. Skipping.")
-                continue
-            validated.append((start, nd))
         return validated
 
     # Create the output folder (timestamped + sanitized theme)
@@ -149,7 +158,21 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
             del voices[voice_name]
 
     if not voices:
-        raise ValueError("No valid notes found in any voice part after validation.")
+        print("Warning: No valid notes found in any voice part after validation. Saving empty JSON log.")
+        # Save the JSON log with the raw piece data even if MIDI fails
+        piece_dict = piece.model_dump()
+        log_filename = os.path.join(theme_folder, f"{base_filename}_error.json")
+        piece_dict["generation_metadata"] = {
+            "user_prompt": theme,
+            "model_used": model or "default",
+            "timestamp": date_str + " " + time_str,
+            "composition_plan": plan.model_dump(),
+            "error": "No valid notes found in any voice part after validation."
+        }
+        with open(log_filename, "w", encoding="utf-8") as f_json:
+            json.dump(piece_dict, f_json, indent=2)
+        print(f"JSON log saved to: {log_filename}")
+        return
 
     # Create the MIDI file
     num_tracks = len(voices)
@@ -187,32 +210,72 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
             midi_file.addProgramChange(i, channel, 0, program)
 
     # Write out the notes for each voice
-    for i, (voice_name, channel, _) in enumerate(track_info):
-        for start_time, nd in voices[voice_name]:
-            if nd.note is not None:
-                duration_float = float(Fraction(nd.duration))
-                try:
-                    midi_file.addNote(
-                        track=i,
-                        channel=channel,
-                        pitch=nd.note,
-                        time=start_time,
-                        duration=max(0.1, duration_float),
-                        volume=100
-                    )
-                except Exception as e:
-                    print(f"Warning: Failed to add note in {voice_name} at {start_time}: {e}")
+    try:
+        for i, (voice_name, channel, _) in enumerate(track_info):
+            note_count = 0
+            for start_time, nd in voices[voice_name]:
+                if nd.note is not None:
+                    try:
+                        duration_float = float(Fraction(nd.duration))
+                        # Ensure minimum duration to prevent MIDI library issues
+                        midi_file.addNote(
+                            track=i,
+                            channel=channel,
+                            pitch=nd.note,
+                            time=start_time,
+                            duration=max(0.1, duration_float),
+                            volume=100
+                        )
+                        note_count += 1
+                    except Exception as e:
+                        print(f"Warning: Failed to add note in {voice_name} at {start_time}: {e}")
+            
+            # If a track has no notes, add a dummy silence note to prevent MIDI library errors
+            if note_count == 0:
+                print(f"Warning: No notes added to {voice_name} track. Adding a dummy silent note.")
+                midi_file.addNote(
+                    track=i,
+                    channel=channel,
+                    pitch=60,  # Middle C
+                    time=0,
+                    duration=0.1,
+                    volume=0  # Silent
+                )
+    except Exception as e:
+        print(f"Error preparing MIDI notes: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Save the MIDI file
     midi_filename = os.path.join(theme_folder, f"{base_filename}.mid")
     print(f"\nSaving MIDI file to: {midi_filename}")
-    with open(midi_filename, "wb") as f_out:
-        try:
+    
+    try:
+        with open(midi_filename, "wb") as f_out:
             midi_file.writeFile(f_out)
-            print("MIDI file saved successfully.")
-        except Exception as e:
-            print(f"Error saving MIDI file: {e}")
-            raise
+        print("MIDI file saved successfully.")
+    except Exception as e:
+        print(f"Error saving MIDI file: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Try to save a simplified version with just one track as fallback
+        try:
+            print("Attempting to save a simplified MIDI file as fallback...")
+            simple_midi = MIDIFile(1)
+            simple_midi.addTempo(0, 0, piece.metadata.tempo)
+            simple_midi.addProgramChange(0, 0, 0, piano_prog)
+            
+            # Add a few simple notes to ensure the file is valid
+            for t in range(4):
+                simple_midi.addNote(0, 0, 60 + t, t, 1, 100)
+                
+            fallback_midi_filename = os.path.join(theme_folder, f"{base_filename}_fallback.mid")
+            with open(fallback_midi_filename, "wb") as f_out:
+                simple_midi.writeFile(f_out)
+            print(f"Fallback MIDI file saved to: {fallback_midi_filename}")
+        except Exception as fallback_error:
+            print(f"Fallback MIDI save also failed: {fallback_error}")
 
     # Save the JSON log with the raw piece data
     piece_dict = piece.model_dump()
@@ -257,7 +320,7 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
     print(json.dumps(plan_with_metadata.model_dump(), indent=2))
 
     print("\n==== Step 2: Generating the final piece section-by-section... ====")
-    all_sections: List[ModularSection] = []
+    all_sections: List[Section] = []
     beats_per_measure = get_beats_per_measure(plan_with_metadata.metadata.time_signature)
 
     for idx, plan_section in enumerate(plan_with_metadata.plan.sections):
@@ -284,10 +347,10 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
                 result = remove_c_style_comments(result)
                 result_dict = json.loads(result)
                 processed_result = preprocess_section_json(result_dict)
-                generated_section = ModularSection.model_validate(processed_result)
+                generated_section = Section.model_validate(processed_result)
             elif hasattr(result, 'model_dump'):
                 processed_result = preprocess_section_json(result.model_dump())
-                generated_section = ModularSection.model_validate(processed_result)
+                generated_section = Section.model_validate(processed_result)
             else:
                 raise TypeError(f"Unexpected result type: {type(result)}")
 

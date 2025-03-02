@@ -49,7 +49,7 @@ class NoteDuration {
 }
 
 class Beat {
-  beat_counter string @description("Count of the current beat being written, starting at one  E.g.,Beat 1 of 4")
+  beat_counter string @description("Count of the current beat being written, starting at one  E.g., Beat 1 of 4")
   bass NoteDuration[] @description("Notes starting at this beat for bass. Leave empty [] when no new note starts.")
   tenor NoteDuration[] @description("Notes starting at this beat for tenor. Leave empty [] when no new note starts.")
   alto NoteDuration[] @description("Notes starting at this beat for alto. Leave empty [] when no new note starts.")
@@ -59,30 +59,32 @@ class Beat {
 }
 
 class Measure {
+  measure_counter string @description("Count of the current measure in this phrase, starting at one. E.g., Measure 1 of 8")
   harmony_plan_for_this_measure string @description("Describe how the harmony should develop over the beats of this measure.")
   phrase_measure_number int @description("Measure number within the phrase, starting from 1")
   beats Beat[] @description("List of beats in this measure. The number of beats should match the time signature.")
 }
 
-class ModularPhrase {
+class Phrase {
+  phrase_counter string @description("Count of the current phrase in this section, starting at one. E.g., Phrase 1 of 2")
   phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
   phrase_description string @description("A textual description of the content of the phrase. The kind of chords, the shape of the melody, the intensity, the rhythms, etc.")
   lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
   measures Measure[] @description("List of measures in this phrase. Must have exactly measures_per_phrase measures.")
 }
 
-class ModularSection {
+class Section {
   section_label string @description("Label for this section, e.g., 'Intro', 'Verse', 'Chorus', Solo/Instrumental Break, Exposition, A, B, C, etc.")
   section_description string @description("Textual description for the section's role in the piece. Convey the style techniques, rhythms, harmonies and/or feelings the section is meant to evoke.")
   harmonic_direction string @description("A textual description of the harmonic structure of the section. This should include the key, the chords, and ideas about how the various parts should interact with each other.")
   rhythmic_direction string @description("A textual description of the rhythmic structure of the section. This should include the feel of the rhythm, the feel of the bass, the feel of the melody, the feel of the harmony, etc.")
   melodic_direction string @description("A textual description of the melodic structure of the section. This should include the feel of the melody, the feel of the bass, the feel of the harmony, etc.")
-  phrases ModularPhrase[] @description("A list of phrases planned for this section.")
+  phrases Phrase[] @description("A list of phrases planned for this section.")
 }
 
 class ModularPiece {
   metadata SongMetadata
-  sections ModularSection[]
+  sections Section[]
 }
 
 /////////////////////////////
@@ -109,13 +111,13 @@ Return a JSON object that follows the schema (CompositionPlanWithMetadata) exact
 
 // New function: GenerateOneSection
 function GenerateOneSection(
-  previousSections: ModularSection[],
+  previousSections: Section[],
   nextSectionPlan: SectionPlan,
   overallPlan: CompositionPlanWithMetadata,
   theme: string,
   total_duration_per_phrase: float,
   beats_per_measure: float
-) -> ModularSection {
+) -> Section {
   client "Gemini20Pro"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
@@ -199,7 +201,7 @@ But do not repeat them here; just create the next section and its phrases.
 
 - THIS IS THE MOST IMPORTANT INSTRUCTION. ENSURE VARIETY OF RHYTHMS AND COUNTERPOINT AMONG VOICES, LIMIT UNISON RHYTHMS.
 
-- Return a JSON object matching the 'ModularSection' schema exactly:
+- Return a JSON object matching the 'Section' schema exactly:
 {{ ctx.output_format }}
 
 Do not return any text other than the JSON object.

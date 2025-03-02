@@ -75,9 +75,9 @@ class BamlAsyncClient:
     
     async def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
+        previousSections: List[types.Section],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
         baml_options: BamlCallOptions = {},
-    ) -> types.ModularSection:
+    ) -> types.Section:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -94,7 +94,7 @@ class BamlAsyncClient:
         tb,
         __cr__,
       )
-      return cast(types.ModularSection, raw.cast_to(types, types, partial_types, False))
+      return cast(types.Section, raw.cast_to(types, types, partial_types, False))
     
 
 
@@ -139,9 +139,9 @@ class BamlStreamClient:
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
+        previousSections: List[types.Section],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[partial_types.ModularSection, types.ModularSection]:
+    ) -> baml_py.BamlStream[partial_types.Section, types.Section]:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -165,10 +165,10 @@ class BamlStreamClient:
         __cr__,
       )
 
-      return baml_py.BamlStream[partial_types.ModularSection, types.ModularSection](
+      return baml_py.BamlStream[partial_types.Section, types.Section](
         raw,
-        lambda x: cast(partial_types.ModularSection, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.ModularSection, x.cast_to(types, types, partial_types, False)),
+        lambda x: cast(partial_types.Section, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.Section, x.cast_to(types, types, partial_types, False)),
         self.__ctx_manager.get(),
       )
     

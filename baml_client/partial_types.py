@@ -59,31 +59,33 @@ class Instrumentation(BaseModel):
     soprano: Optional[int] = None
 
 class Measure(BaseModel):
+    measure_counter: Optional[str] = None
     harmony_plan_for_this_measure: Optional[str] = None
     phrase_measure_number: Optional[int] = None
     beats: List["Beat"]
 
-class ModularPhrase(BaseModel):
+class ModularPiece(BaseModel):
+    metadata: Optional["SongMetadata"] = None
+    sections: List["Section"]
+
+class NoteDuration(BaseModel):
+    note: Optional[int] = None
+    duration: Optional[str] = None
+
+class Phrase(BaseModel):
+    phrase_counter: Optional[str] = None
     phrase_label: Optional[str] = None
     phrase_description: Optional[str] = None
     lyrics: Optional[str] = None
     measures: List["Measure"]
 
-class ModularPiece(BaseModel):
-    metadata: Optional["SongMetadata"] = None
-    sections: List["ModularSection"]
-
-class ModularSection(BaseModel):
+class Section(BaseModel):
     section_label: Optional[str] = None
     section_description: Optional[str] = None
     harmonic_direction: Optional[str] = None
     rhythmic_direction: Optional[str] = None
     melodic_direction: Optional[str] = None
-    phrases: List["ModularPhrase"]
-
-class NoteDuration(BaseModel):
-    note: Optional[int] = None
-    duration: Optional[str] = None
+    phrases: List["Phrase"]
 
 class SectionPlan(BaseModel):
     label: Optional[str] = None
