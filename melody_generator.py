@@ -11,6 +11,14 @@ from baml_client.async_client import b as async_b  # Import the async client
 from baml_client.types import NoteDuration, Section, SongMetadata, CompositionPlan, ModularPiece, Beat
 from baml_py import ClientRegistry  # Import ClientRegistry
 
+# Import the new service
+try:
+    from sheet_music_generator import convert_midi_to_musicxml, convert_musicxml_to_image
+except ImportError:
+    print("Warning: sheet_music_generator.py not found. Sheet music image generation will be unavailable.")
+    convert_midi_to_musicxml = None
+    convert_musicxml_to_image = None
+
 print("Initializing melody generator...")
 
 # New function to convert note names to MIDI numbers
@@ -542,7 +550,7 @@ def fill_empty_final_measure(piece: ModularPiece) -> ModularPiece:
     
     return piece
 
-def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan, model: Optional[str] = None) -> None:
+def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan, model: Optional[str] = None, generate_images: bool = False) -> None:
     """
     Saves the ModularPiece to a MIDI file and a JSON log file in a timestamped folder.
     
@@ -559,6 +567,7 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         theme: The theme used to generate the piece
         plan: The composition plan
         model: The model used for generation (optional)
+        generate_images: Whether to generate sheet music images (default: False)
     """
     # Create the output folder
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -745,6 +754,21 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         except Exception as fallback_error:
             print(f"Fallback MIDI save also failed: {fallback_error}")
 
+    # Generate sheet music images if requested
+    if generate_images and convert_midi_to_musicxml and convert_musicxml_to_image:
+        try:
+            print(f"\nGenerating sheet music images for: {midi_filename}")
+            xml_path = convert_midi_to_musicxml(midi_filename)
+            image_files = convert_musicxml_to_image(xml_path)
+            if image_files:
+                print(f"Generated sheet music images: {', '.join(image_files)}")
+            else:
+                print("No sheet music images were generated.")
+        except Exception as e:
+            print(f"Error generating sheet music images: {e}")
+    elif generate_images:
+        print("Sheet music generation skipped: Required modules not available.")
+    
     # Save the JSON log
     piece_dict = piece.model_dump()
     log_filename = os.path.join(theme_folder, f"{base_filename}.json")
@@ -761,13 +785,14 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         json.dump(piece_dict, f_json, indent=2)
     print("JSON log saved successfully.")
 
-async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None) -> None:
+async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None, generate_images: bool = False) -> None:
     """
     Generate a modular song based on the given theme.
     
     Args:
         theme: The thematic prompt for the composition.
         model: The model/client to use for generation. If None, uses the default client.
+        generate_images: Whether to generate sheet music images (default: False)
     """
     client_registry = None
     if model:
@@ -861,7 +886,7 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
         final_piece = ModularPiece(metadata=metadata, sections=all_sections)
         print("Piece aggregated, saving to MIDI...")
         
-        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan, model)
+        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan, model, generate_images=generate_images)
         print("MIDI saved successfully.")
     except Exception as e:
         print(f"Error creating final piece: {e}")

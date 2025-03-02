@@ -15,18 +15,21 @@ Each generated piece includes:
 Each piece is saved as:
 1. A multi-track MIDI file in the "outputs/" folder
 2. A JSON log file capturing both the composition plan and the final piece data
+3. Optional sheet music images if --generate-images is specified
 
 Uses BAML with various LLM models for generation.
 The model can be specified via command-line argument.
 
 Requires:
-    pip install pydantic MIDIUtil baml-client python-dotenv
+    pip install pydantic MIDIUtil baml-client python-dotenv music21
+    LilyPond installed and in PATH for sheet music generation
 """
 import dotenv
 import os
 import asyncio
 import argparse
 import sys
+import shutil
 from melody_generator import plan_and_generate_modular_song
 
 dotenv.load_dotenv()
@@ -59,9 +62,16 @@ def list_available_models():
         print(f"Error listing models: {e}")
         sys.exit(1)
 
-async def generate_with_model(theme: str, model: str, idx: int, total: int):
+async def generate_with_model(theme: str, model: str, idx: int, total: int, generate_images: bool = False):
     """
     Generate a piece with a specific model, with appropriate console output.
+    
+    Args:
+        theme (str): The theme for the composition.
+        model (str): The model to use.
+        idx (int): Index of the model in the list.
+        total (int): Total number of models.
+        generate_images (bool): Whether to generate sheet music images.
     """
     try:
         print(f"\n=========================================")
@@ -72,7 +82,7 @@ async def generate_with_model(theme: str, model: str, idx: int, total: int):
         print("1. Generating a composition plan")
         print("2. Creating the full piece based on that plan\n")
         
-        await plan_and_generate_modular_song(theme, model)
+        await plan_and_generate_modular_song(theme, model, generate_images=generate_images)
         
         print(f"\nCompleted generation with model: {model}")
         return (True, model, None)
@@ -95,11 +105,20 @@ async def main():
                         help="List all available models and exit")
     parser.add_argument("--concurrent", action="store_true",
                         help="Run models concurrently instead of sequentially")
+    parser.add_argument("--generate-images", action="store_true",
+                        help="Generate sheet music images from MIDI using music21 and LilyPond")
     args = parser.parse_args()
     
     # If --list-models flag is set, show available models and exit
     if args.list_models:
         list_available_models()
+
+    # Check if LilyPond is installed if --generate-images is set
+    if args.generate_images:
+        import shutil
+        if not shutil.which('lilypond'):
+            print("Warning: LilyPond is not installed or not in the system PATH. Sheet music images will not be generated.")
+            args.generate_images = False
 
     # Ensure outputs folder exists
     os.makedirs("outputs", exist_ok=True)
@@ -139,36 +158,28 @@ async def main():
     
     # If no models specified, run with default
     if not models_to_run:
-        # Run with default model
         print(f"\nGenerating music with theme: {theme}")
         print("Using default model")
         print("\nThis will be done in two steps:")
         print("1. Generating a composition plan")
         print("2. Creating the full piece based on that plan\n")
         
-        await plan_and_generate_modular_song(theme, None)
+        await plan_and_generate_modular_song(theme, None, generate_images=args.generate_images)
     else:
-        # Run with specified models
         print(f"\nGenerating music with theme: {theme}")
         total_models = len(models_to_run)
         
         if args.concurrent:
             print(f"Running generation concurrently for {total_models} models: {', '.join(models_to_run)}")
-            
-            # Create tasks for all models
             tasks = [
-                generate_with_model(theme, model, idx, total_models)
+                generate_with_model(theme, model, idx, total_models, args.generate_images)
                 for idx, model in enumerate(models_to_run)
             ]
-            
-            # Run all tasks concurrently and wait for completion
             results = await asyncio.gather(*tasks, return_exceptions=False)
             
-            # Summarize results
             print("\n=========================================")
             print("GENERATION SUMMARY")
             print("=========================================")
-            
             success_count = 0
             failure_count = 0
             
@@ -184,13 +195,10 @@ async def main():
             print("Check the outputs folder for the generated MIDI files.")
         else:
             print(f"Running generation sequentially for {total_models} models: {', '.join(models_to_run)}")
-            
-            # Run models one at a time
             for idx, model in enumerate(models_to_run):
-                result = await generate_with_model(theme, model, idx, total_models)
-                
+                await generate_with_model(theme, model, idx, total_models, args.generate_images)
                 if idx < len(models_to_run) - 1:
                     print("\nMoving to next model...\n")
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
