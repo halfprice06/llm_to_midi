@@ -216,7 +216,7 @@ retry_policy Constant {
 }
 
 retry_policy Exponential {
-  max_retries 2
+  max_retries 5
   // Strategy is optional
   strategy {
     type exponential_backoff

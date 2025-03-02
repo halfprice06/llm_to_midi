@@ -40,6 +40,15 @@ def all_succeeded(checks: Dict[CheckName, Check]) -> bool:
 
 
 
+class Beat(BaseModel):
+    beat_counter: str
+    bass: List["NoteDuration"]
+    tenor: List["NoteDuration"]
+    alto: List["NoteDuration"]
+    soprano: List["NoteDuration"]
+    piano: List["NoteDuration"]
+    percussion: Optional[List["NoteDuration"]] = None
+
 class CompositionPlan(BaseModel):
     plan_title: str
     style: Optional[str] = None
@@ -56,13 +65,9 @@ class Instrumentation(BaseModel):
     soprano: int
 
 class Measure(BaseModel):
+    harmony_plan_for_this_measure: str
     phrase_measure_number: int
-    bass: List["NoteDuration"]
-    tenor: List["NoteDuration"]
-    alto: List["NoteDuration"]
-    soprano: List["NoteDuration"]
-    piano: List["NoteDuration"]
-    percussion: Optional[List["NoteDuration"]] = None
+    beats: List["Beat"]
 
 class ModularPhrase(BaseModel):
     phrase_label: str
@@ -85,8 +90,6 @@ class ModularSection(BaseModel):
 class NoteDuration(BaseModel):
     note: Optional[int] = None
     duration: str
-    beats_so_far: float
-    beats_this_measure_should_have_so_I_know_when_to_stop: int
 
 class SectionPlan(BaseModel):
     label: str

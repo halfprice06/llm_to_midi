@@ -59,6 +59,29 @@ def list_available_models():
         print(f"Error listing models: {e}")
         sys.exit(1)
 
+async def generate_with_model(theme: str, model: str, idx: int, total: int):
+    """
+    Generate a piece with a specific model, with appropriate console output.
+    """
+    try:
+        print(f"\n=========================================")
+        print(f"MODEL {idx+1} of {total}: {model}")
+        print(f"=========================================\n")
+        
+        print("This will be done in two steps:")
+        print("1. Generating a composition plan")
+        print("2. Creating the full piece based on that plan\n")
+        
+        await plan_and_generate_modular_song(theme, model)
+        
+        print(f"\nCompleted generation with model: {model}")
+        return (True, model, None)
+    except Exception as e:
+        print(f"\nError generating with model {model}: {e}")
+        import traceback
+        traceback.print_exc()
+        return (False, model, str(e))
+
 async def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Generate music based on a theme.")
@@ -70,6 +93,8 @@ async def main():
                         help="Comma-separated list of models to run sequentially")
     parser.add_argument("--list-models", action="store_true",
                         help="List all available models and exit")
+    parser.add_argument("--concurrent", action="store_true",
+                        help="Run models concurrently instead of sequentially")
     args = parser.parse_args()
     
     # If --list-models flag is set, show available models and exit
@@ -109,6 +134,9 @@ async def main():
         models_list = [m.strip() for m in args.models.split(',') if m.strip()]
         models_to_run.extend(models_list)
     
+    # Remove duplicates while preserving order
+    models_to_run = list(dict.fromkeys(models_to_run))
+    
     # If no models specified, run with default
     if not models_to_run:
         # Run with default model
@@ -120,23 +148,49 @@ async def main():
         
         await plan_and_generate_modular_song(theme, None)
     else:
-        # Run sequentially for each model
+        # Run with specified models
         print(f"\nGenerating music with theme: {theme}")
-        print(f"Running generation sequentially for {len(models_to_run)} models: {', '.join(models_to_run)}")
+        total_models = len(models_to_run)
         
-        for idx, model in enumerate(models_to_run):
-            print(f"\n=========================================")
-            print(f"MODEL {idx+1} of {len(models_to_run)}: {model}")
-            print(f"=========================================\n")
+        if args.concurrent:
+            print(f"Running generation concurrently for {total_models} models: {', '.join(models_to_run)}")
             
-            print("This will be done in two steps:")
-            print("1. Generating a composition plan")
-            print("2. Creating the full piece based on that plan\n")
+            # Create tasks for all models
+            tasks = [
+                generate_with_model(theme, model, idx, total_models)
+                for idx, model in enumerate(models_to_run)
+            ]
             
-            await plan_and_generate_modular_song(theme, model)
+            # Run all tasks concurrently and wait for completion
+            results = await asyncio.gather(*tasks, return_exceptions=False)
             
-            if idx < len(models_to_run) - 1:
-                print("\nMoving to next model...\n")
+            # Summarize results
+            print("\n=========================================")
+            print("GENERATION SUMMARY")
+            print("=========================================")
+            
+            success_count = 0
+            failure_count = 0
+            
+            for success, model, error in results:
+                if success:
+                    success_count += 1
+                    print(f"✓ {model}: Successfully generated")
+                else:
+                    failure_count += 1
+                    print(f"✗ {model}: Failed - {error}")
+            
+            print(f"\nCompleted: {success_count}/{total_models} successful, {failure_count}/{total_models} failed")
+            print("Check the outputs folder for the generated MIDI files.")
+        else:
+            print(f"Running generation sequentially for {total_models} models: {', '.join(models_to_run)}")
+            
+            # Run models one at a time
+            for idx, model in enumerate(models_to_run):
+                result = await generate_with_model(theme, model, idx, total_models)
+                
+                if idx < len(models_to_run) - 1:
+                    print("\nMoving to next model...\n")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

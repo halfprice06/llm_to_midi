@@ -34,6 +34,15 @@ class StreamState(BaseModel, Generic[T]):
     state: Literal["Pending", "Incomplete", "Complete"]
 
 
+class Beat(BaseModel):
+    beat_counter: Optional[str] = None
+    bass: List["NoteDuration"]
+    tenor: List["NoteDuration"]
+    alto: List["NoteDuration"]
+    soprano: List["NoteDuration"]
+    piano: List["NoteDuration"]
+    percussion: Optional[List["NoteDuration"]] = None
+
 class CompositionPlan(BaseModel):
     plan_title: Optional[str] = None
     style: Optional[str] = None
@@ -50,13 +59,9 @@ class Instrumentation(BaseModel):
     soprano: Optional[int] = None
 
 class Measure(BaseModel):
+    harmony_plan_for_this_measure: Optional[str] = None
     phrase_measure_number: Optional[int] = None
-    bass: List["NoteDuration"]
-    tenor: List["NoteDuration"]
-    alto: List["NoteDuration"]
-    soprano: List["NoteDuration"]
-    piano: List["NoteDuration"]
-    percussion: Optional[List["NoteDuration"]] = None
+    beats: List["Beat"]
 
 class ModularPhrase(BaseModel):
     phrase_label: Optional[str] = None
@@ -79,8 +84,6 @@ class ModularSection(BaseModel):
 class NoteDuration(BaseModel):
     note: Optional[int] = None
     duration: Optional[str] = None
-    beats_so_far: Optional[float] = None
-    beats_this_measure_should_have_so_I_know_when_to_stop: Optional[int] = None
 
 class SectionPlan(BaseModel):
     label: Optional[str] = None

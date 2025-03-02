@@ -2,14 +2,6 @@
 // Existing classes
 /////////////////////////////
 
-// Represents the duration and pitch of a musical note
-class NoteDuration {
-  note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
-  duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
-  beats_so_far float @description("A running sum of all of the note durations for this instrument so far for this measure. We are using this to keep track so we end up with exactly the right amount of beats per measure. Count as a float. If the first note was 1/4, this value would be .25")
-  beats_this_measure_should_have_so_I_know_when_to_stop int @description("Don't stop writing notes until this number of total beats for the measure is reached.")
-}
-
 // Holds program numbers (0-127) for different voices
 class Instrumentation {
   bass int @description("Program number for bass voice")
@@ -51,14 +43,25 @@ class CompositionPlanWithMetadata {
   metadata SongMetadata @description("The song metadata including title, tempo, key signature, time signature and instruments")
 }
 
+class NoteDuration {
+  note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
+  duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
+}
+
+class Beat {
+  beat_counter string @description("Count of the current beat being written, starting at one  E.g.,Beat 1 of 4")
+  bass NoteDuration[] @description("Notes starting at this beat for bass. Leave empty [] when no new note starts.")
+  tenor NoteDuration[] @description("Notes starting at this beat for tenor. Leave empty [] when no new note starts.")
+  alto NoteDuration[] @description("Notes starting at this beat for alto. Leave empty [] when no new note starts.")
+  soprano NoteDuration[] @description("Notes starting at this beat for soprano. Leave empty [] when no new note starts.")
+  piano NoteDuration[] @description("Notes starting at this beat for piano. Leave empty [] when no new note starts.")
+  percussion NoteDuration[]? @description("Optional percussion notes starting at this beat")
+}
+
 class Measure {
-  phrase_measure_number int @description("Counting from 1 up to the last measure required for the phrase.")
-  bass NoteDuration[] @description("Bass line - typically provides harmonic foundation with slower rhythmic movement, often using root notes and fifths")
-  tenor NoteDuration[] @description("Tenor voice - provides inner harmony, can move in parallel or contrary motion with other voices, often harmonizes with alto")
-  alto NoteDuration[] @description("Alto voice - middle voice that helps fill out harmonies, frequently moves in parallel thirds with soprano or tenor")
-  soprano NoteDuration[] @description("Soprano/lead voice - carries the main melody, typically has the highest pitch and most prominent melodic movement")
-  piano NoteDuration[] @description("Piano part - can provide harmonic support, melodic lines, or both through a combination of chords and melodic passages. Arpeggios work well here.")
-  percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers for rhythmic accompaniment")
+  harmony_plan_for_this_measure string @description("Describe how the harmony should develop over the beats of this measure.")
+  phrase_measure_number int @description("Measure number within the phrase, starting from 1")
+  beats Beat[] @description("List of beats in this measure. The number of beats should match the time signature.")
 }
 
 class ModularPhrase {
@@ -145,9 +148,12 @@ IMPORTANT REQUIREMENTS:
 
 **When generating measures:**
 - Keep each measure self-contained; notes should not span across measures.
-- Use rests (note: null) to fill measures if needed.
 - Durations must be strings representing fractions (e.g., '1/2', '1/3', '1'). Do not use smaller than 1/16 notes.
 - Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
+- For each measure, generate {{ beats_per_measure }} beats.
+- For each beat, specify the notes that start precisely at that beat for each voice.
+- Notes can have durations that extend beyond the beat or into subsequent measures, but they must not extend beyond the end of the phrase.
+- Leave empty [] when no new note starts. 
 
 Voices:
 - bass
@@ -158,7 +164,7 @@ Voices:
 - percussion (channel 10) - optional, only include if it fits the genre and style
 
 Instruments:
-- Choose appropriate MIDI instruments for bass, tenor, alto, and soprano voices
+- Choose appropriate MIDI instruments for bass, tenor, alto, and soprano voices (from overallPlan.metadata.instruments).
 - Piano voice is always instrument 0 (Acoustic Grand Piano)
 - Percussion track uses General MIDI drum map note numbers on channel 10
 
@@ -179,7 +185,7 @@ Technical Requirements:
   - For melodic parts (60 = middle C)
   - For percussion (35 = bass drum, 38 = snare, 42 = closed hi-hat, etc.)
   - null indicates a rest
-- Duration is in beats (1.0 = quarter note, 0.5 = eighth note, 0.25 = sixteenth note, 0.125 = thirty-second note, etc.)
+- Duration is in beats (1/4 = quarter note, 1/8 = eighth note, 1/16 = sixteenth note. Don't go smaller.)
 - End long phrases with interesting cadences or long notes
 - Ensure variety of rhythms and counterpoint among voices, limit unison rhythms
 - Use piano to keep beat and add interest (e.g. arpeggiated chords)

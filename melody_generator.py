@@ -11,9 +11,6 @@ from baml_client.async_client import b as async_b  # Import the async client
 from baml_client.types import NoteDuration, Measure, ModularPhrase, ModularSection, Instrumentation, SongMetadata, SectionPlan, CompositionPlan, CompositionPlanWithMetadata, ModularPiece
 from baml_py import ClientRegistry  # Import ClientRegistry
 
-# No need to define these manually anymore
-# Use them directly in your code
-
 print("Initializing melody generator...")
 
 def preprocess_section_json(section_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -26,8 +23,12 @@ def preprocess_section_json(section_data: Dict[str, Any]) -> Dict[str, Any]:
         
     if "phrases" in section_data and isinstance(section_data["phrases"], list):
         for phrase in section_data["phrases"]:
-            if isinstance(phrase, dict) and "percussion" in phrase and phrase["percussion"] is None:
-                del phrase["percussion"]
+            if isinstance(phrase, dict):
+                for measure in phrase.get("measures", []):
+                    if isinstance(measure, dict):
+                        for beat in measure.get("beats", []):
+                            if isinstance(beat, dict) and "percussion" in beat and beat["percussion"] is None:
+                                del beat["percussion"]
     
     return section_data
 
@@ -36,11 +37,13 @@ def preprocess_section_json(section_data: Dict[str, Any]) -> Dict[str, Any]:
 # ------------------------------------------------------------------
 
 def get_beats_per_measure(time_signature: str) -> float:
+    """
+    Calculate the number of beats per measure based on the time signature.
+    Assumes a quarter note is one beat.
+    """
     try:
         numerator, denominator = map(int, time_signature.split('/'))
-        # Assuming beat = quarter note (1.0 in NoteDuration)
         # Beats per measure = numerator * (4 / denominator)
-        # Examples: '4/4' -> 4 beats, '3/4' -> 3 beats, '6/8' -> 3 beats (6 eighth notes = 3 quarter notes)
         return numerator * (4 / denominator)
     except Exception as e:
         print(f"Error parsing time signature '{time_signature}': {e}")
@@ -57,7 +60,11 @@ def remove_c_style_comments(json_str: str) -> str:
     json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
     return json_str
 
-def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[NoteDuration]]:
+def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[Tuple[float, NoteDuration]]]:
+    """
+    Aggregates all notes in the ModularPiece into a dictionary where each voice
+    maps to a list of (start_time, NoteDuration) tuples.
+    """
     aggregated = {
         "Bass": [],
         "Tenor": [],
@@ -66,79 +73,72 @@ def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[NoteDuration]
         "Piano": [],
         "Percussion": []
     }
+    beats_per_measure = get_beats_per_measure(piece.metadata.time_signature)
+    current_time = 0.0
 
     for section in piece.sections:
         for phrase in section.phrases:
             for measure in phrase.measures:
-                aggregated["Bass"].extend(measure.bass)
-                aggregated["Tenor"].extend(measure.tenor)
-                aggregated["Alto"].extend(measure.alto)
-                aggregated["Soprano"].extend(measure.soprano)
-                aggregated["Piano"].extend(measure.piano)
-                if hasattr(measure, 'percussion') and measure.percussion:
-                    aggregated["Percussion"].extend(measure.percussion)
+                for beat_idx, beat in enumerate(measure.beats):
+                    beat_start = current_time + beat_idx
+                    for voice_name in ["bass", "tenor", "alto", "soprano", "piano"]:
+                        notes = getattr(beat, voice_name)
+                        for note in notes:
+                            aggregated[voice_name.capitalize()].append((beat_start, note))
+                    if hasattr(beat, 'percussion') and beat.percussion:
+                        for note in beat.percussion:
+                            aggregated["Percussion"].append((beat_start, note))
+                current_time += beats_per_measure
 
     if not aggregated["Percussion"]:
         del aggregated["Percussion"]
-
     return aggregated
 
 def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan, model: Optional[str] = None) -> None:
     """
-    Saves the given ModularPiece to:
-      1) A MIDI file in 'outputs/<DATE> - <TIME>_<SAFE_THEME>/'
-      2) A JSON log file in the same folder
-
-    The MIDI file has multiple tracks:
+    Saves the ModularPiece to a MIDI file and a JSON log file in a timestamped folder.
+    
+    MIDI Tracks:
       - Bass (track 0, channel 0)
       - Tenor (track 1, channel 1)
       - Alto (track 2, channel 2)
       - Soprano (track 3, channel 3)
       - Piano (track 4, channel 4)
       - Percussion (track 5, channel 9) if present
-      
+    
     Args:
         piece: The ModularPiece to save
         theme: The theme used to generate the piece
         plan: The composition plan
         model: The model used for generation (optional)
     """
-
     # Validate note durations before processing
-    def validate_notes(notes: List[NoteDuration], voice_name: str) -> List[NoteDuration]:
+    def validate_notes(notes: List[Tuple[float, NoteDuration]], voice_name: str) -> List[Tuple[float, NoteDuration]]:
         validated = []
-        for i, nd in enumerate(notes):
+        for start, nd in notes:
             if Fraction(nd.duration) <= 0:
-                print(f"Warning: Found {voice_name} note at position {i} with invalid duration {nd.duration}. Skipping.")
+                print(f"Warning: Found {voice_name} note at start {start} with invalid duration {nd.duration}. Skipping.")
                 continue
             if nd.note is not None and (nd.note < 0 or nd.note > 127):
-                print(f"Warning: Found {voice_name} note at position {i} with invalid MIDI note number {nd.note}. Skipping.")
+                print(f"Warning: Found {voice_name} note at start {start} with invalid MIDI note number {nd.note}. Skipping.")
                 continue
-            validated.append(nd)
+            validated.append((start, nd))
         return validated
 
-    # 1) Create the output folder (timestamped + sanitized theme)
+    # Create the output folder (timestamped + sanitized theme)
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     time_str = datetime.datetime.now().strftime("%H%M%S")
-
-    safe_theme = "".join(c for c in theme if c.isalnum() or c in (' ', '-')).strip()
-    safe_theme = safe_theme.replace(' ', '_')
+    safe_theme = "".join(c for c in theme if c.isalnum() or c in (' ', '-')).strip().replace(' ', '_')
     theme_folder = os.path.join("outputs", f"{date_str} - {time_str}_{safe_theme}")
     os.makedirs(theme_folder, exist_ok=True)
 
-    # 2) Create a base filename from the piece metadata
+    # Create a base filename from the piece metadata
     safe_title = "".join(c for c in piece.metadata.title if c.isalnum() or c in (' ', '-')).strip()
     safe_key = "".join(c for c in piece.metadata.key_signature if c.isalnum() or c in (' ', '-')).strip()
-    
-    # Include the model name in the filename if provided
-    model_str = "default"
-    if model:
-        # Clean up model name for filename
-        model_str = "".join(c for c in model if c.isalnum() or c in (' ', '-')).strip()
-    
+    model_str = "default" if not model else "".join(c for c in model if c.isalnum() or c in (' ', '-')).strip()
     base_filename = f"{date_str} - {model_str} - {safe_title} - {safe_key} - {piece.metadata.tempo}bpm"
 
-    # 3) Aggregate all notes in a dict of voice -> List[NoteDuration]
+    # Aggregate all notes with start times
     voices = aggregate_modular_piece(piece)
 
     # Validate all notes before proceeding
@@ -148,11 +148,11 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
             print(f"Warning: {voice_name} track has no valid notes after validation. Removing track.")
             del voices[voice_name]
 
-    # 4) Create the MIDI file
-    num_tracks = len(voices)  # Only create tracks for voices that have valid notes
-    if num_tracks == 0:
+    if not voices:
         raise ValueError("No valid notes found in any voice part after validation.")
-        
+
+    # Create the MIDI file
+    num_tracks = len(voices)
     midi_file = MIDIFile(num_tracks)
 
     # Add the tempo to each track
@@ -164,9 +164,9 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
     tenor_prog = piece.metadata.instruments.tenor
     alto_prog = piece.metadata.instruments.alto
     soprano_prog = piece.metadata.instruments.soprano
-    piano_prog = 0  # piano is always 0
+    piano_prog = 0  # Piano is always 0
 
-    # Track to channel mapping (excluding any removed voices)
+    # Track to channel mapping
     track_info = []
     if "Bass" in voices:
         track_info.append(("Bass", 0, bass_prog))
@@ -186,28 +186,24 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         if program is not None:  # Skip program change for percussion
             midi_file.addProgramChange(i, channel, 0, program)
 
-    # 5) Write out the notes for each voice
+    # Write out the notes for each voice
     for i, (voice_name, channel, _) in enumerate(track_info):
-        time_pos = 0.0
-        track_notes = voices[voice_name]
-
-        for nd in track_notes:
-            duration_float = float(Fraction(nd.duration))  # Convert "1/2" to 0.5
+        for start_time, nd in voices[voice_name]:
             if nd.note is not None:
+                duration_float = float(Fraction(nd.duration))
                 try:
                     midi_file.addNote(
                         track=i,
                         channel=channel,
                         pitch=nd.note,
-                        time=time_pos,
+                        time=start_time,
                         duration=max(0.1, duration_float),
                         volume=100
                     )
                 except Exception as e:
-                    print(f"Warning: Failed to add note in {voice_name} track at position {time_pos}: {e}")
-            time_pos += duration_float  # Increment time using the float value
+                    print(f"Warning: Failed to add note in {voice_name} at {start_time}: {e}")
 
-    # 6) Save the MIDI file
+    # Save the MIDI file
     midi_filename = os.path.join(theme_folder, f"{base_filename}.mid")
     print(f"\nSaving MIDI file to: {midi_filename}")
     with open(midi_filename, "wb") as f_out:
@@ -218,8 +214,8 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
             print(f"Error saving MIDI file: {e}")
             raise
 
-    # 7) Save the JSON log with the raw piece data
-    piece_dict = piece.dict()
+    # Save the JSON log with the raw piece data
+    piece_dict = piece.model_dump()
     log_filename = os.path.join(theme_folder, f"{base_filename}.json")
     print(f"Saving JSON log to: {log_filename}")
 
@@ -227,7 +223,7 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
         "user_prompt": theme,
         "model_used": model or "default",
         "timestamp": date_str + " " + time_str,
-        "composition_plan": plan.dict()
+        "composition_plan": plan.model_dump()
     }
 
     with open(log_filename, "w", encoding="utf-8") as f_json:
@@ -251,16 +247,14 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
     client_registry = None
     if model:
         client_registry = ClientRegistry()
-        # Set the specified model as the primary client
         client_registry.set_primary(model)
         print(f"Using model: {model}")
     
     print("\n==== Step 1: Generating the composition plan... ====")
-    # Pass client_registry to the BAML function
     baml_options = {"client_registry": client_registry} if client_registry else {}
     plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme, baml_options=baml_options)
     print("Successfully got CompositionPlan with metadata:")
-    print(json.dumps(plan_with_metadata.dict(), indent=2))
+    print(json.dumps(plan_with_metadata.model_dump(), indent=2))
 
     print("\n==== Step 2: Generating the final piece section-by-section... ====")
     all_sections: List[ModularSection] = []
@@ -269,9 +263,9 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
     for idx, plan_section in enumerate(plan_with_metadata.plan.sections):
         try:
             print(f"\n-- Generating Section #{idx+1}: {plan_section.label} --")
-            previous_sections = [s.dict() for s in all_sections]
-            section_plan_dict = plan_section.dict()
-            plan_dict = plan_with_metadata.dict()
+            previous_sections = [s.model_dump() for s in all_sections]
+            section_plan_dict = plan_section.model_dump()
+            plan_dict = plan_with_metadata.model_dump()
             section_plan_dict["description"] = plan_section.description or f"Section {plan_section.label}"
             total_duration_per_phrase = plan_section.measures_per_phrase * beats_per_measure
 
@@ -282,7 +276,7 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
                 theme=theme,
                 total_duration_per_phrase=total_duration_per_phrase,
                 beats_per_measure=beats_per_measure,
-                baml_options=baml_options  # Pass the client registry options
+                baml_options=baml_options
             )
 
             result = await stream.get_final_response()
@@ -290,10 +284,10 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
                 result = remove_c_style_comments(result)
                 result_dict = json.loads(result)
                 processed_result = preprocess_section_json(result_dict)
-                generated_section = ModularSection.parse_obj(processed_result)
-            elif hasattr(result, 'dict'):
-                processed_result = preprocess_section_json(result.dict())
-                generated_section = ModularSection.parse_obj(processed_result)
+                generated_section = ModularSection.model_validate(processed_result)
+            elif hasattr(result, 'model_dump'):
+                processed_result = preprocess_section_json(result.model_dump())
+                generated_section = ModularSection.model_validate(processed_result)
             else:
                 raise TypeError(f"Unexpected result type: {type(result)}")
 
@@ -301,17 +295,23 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
             for phrase in generated_section.phrases:
                 if len(phrase.measures) != plan_section.measures_per_phrase:
                     print(f"Warning: Phrase '{phrase.phrase_label}' has {len(phrase.measures)} measures, expected {plan_section.measures_per_phrase}")
+                phrase_end = plan_section.measures_per_phrase * beats_per_measure
                 for measure_idx, measure in enumerate(phrase.measures):
-                    for voice_name in ["bass", "tenor", "alto", "soprano", "piano"]:
-                        notes = getattr(measure, voice_name)
-                        total_duration = sum(Fraction(nd.duration) for nd in notes)
-                        if total_duration != Fraction(beats_per_measure):
-                            print(f"Warning: Section '{generated_section.section_label}', Phrase '{phrase.phrase_label}', Measure {measure_idx+1}, {voice_name} total duration {total_duration} does not match beats_per_measure {beats_per_measure}")
-                    if hasattr(measure, 'percussion') and measure.percussion:
-                        total_duration = sum(Fraction(nd.duration) for nd in measure.percussion)
-                        if total_duration != Fraction(beats_per_measure):
-                            print(f"Warning: Section '{generated_section.section_label}', Phrase '{phrase.phrase_label}', Measure {measure_idx+1}, percussion total duration {total_duration} does not match beats_per_measure {beats_per_measure}")
-                            
+                    if len(measure.beats) != int(beats_per_measure):
+                        print(f"Warning: Measure {measure.phrase_measure_number} has {len(measure.beats)} beats, expected {beats_per_measure}")
+                    measure_start = measure_idx * beats_per_measure
+                    for beat_idx, beat in enumerate(measure.beats):
+                        beat_start = measure_start + beat_idx
+                        for voice_name in ["bass", "tenor", "alto", "soprano", "piano"]:
+                            for nd in getattr(beat, voice_name):
+                                end_time = beat_start + float(Fraction(nd.duration))
+                                if end_time > phrase_end:
+                                    print(f"Warning: Note in {voice_name} at beat {beat_idx} of measure {measure_idx + 1} extends beyond phrase end ({end_time} > {phrase_end})")
+                        if hasattr(beat, 'percussion') and beat.percussion:
+                            for nd in beat.percussion:
+                                end_time = beat_start + float(Fraction(nd.duration))
+                                if end_time > phrase_end:
+                                    print(f"Warning: Percussion note at beat {beat_idx} of measure {measure_idx + 1} extends beyond phrase end ({end_time} > {phrase_end})")
             all_sections.append(generated_section)
             print(f"  Section '{generated_section.section_label}' generated with {len(generated_section.phrases)} phrases.")
 
@@ -321,14 +321,11 @@ async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None
 
     # Final piece creation and saving
     try:
-        metadata = SongMetadata.parse_obj(plan_with_metadata.metadata.dict())
+        metadata = SongMetadata.model_validate(plan_with_metadata.metadata.model_dump())
         print("All sections generated, aggregating piece...")
         final_piece = ModularPiece(metadata=metadata, sections=all_sections)
         print("Piece aggregated, saving to MIDI...")
-        
-        # Pass the model name to the save function
         save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan, model)
-        
         print("MIDI saved successfully.")
     except Exception as e:
         print(f"Error creating final piece: {e}")
@@ -354,30 +351,22 @@ if __name__ == "__main__":
     
     # Process model arguments
     models_to_run = []
-    
-    # Add models from --model arguments (can be specified multiple times)
     if args.model:
         models_to_run.extend(args.model)
-    
-    # Add models from --models argument (comma-separated list)
     if args.models:
         models_list = [m.strip() for m in args.models.split(',') if m.strip()]
         models_to_run.extend(models_list)
     
-    # If no models specified, run with default
     if not models_to_run:
         # Run with default model
         asyncio.run(plan_and_generate_modular_song(theme, None))
     else:
         # Run sequentially for each model
         print(f"Running generation sequentially for {len(models_to_run)} models: {', '.join(models_to_run)}")
-        
         for idx, model in enumerate(models_to_run):
             print(f"\n=========================================")
             print(f"MODEL {idx+1} of {len(models_to_run)}: {model}")
             print(f"=========================================\n")
-            
             asyncio.run(plan_and_generate_modular_song(theme, model))
-            
             if idx < len(models_to_run) - 1:
                 print("\nMoving to next model...\n")
