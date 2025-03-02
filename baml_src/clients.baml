@@ -60,6 +60,18 @@ client<llm> OpenAIGPT4o {
   }
 }
 
+client<llm> OpenAIGPT4oMini {
+  provider openai
+  retry_policy Exponential
+
+  options {
+    temperature 1
+    model "gpt-4o-mini"
+    api_key env.OPENAI_API_KEY
+
+  }
+}
+
 
 client<llm> HyperbolicDeepseekReasoner {
   provider openai-generic
@@ -177,6 +189,16 @@ client<llm> Gemini20FlashThinkingExp {
   retry_policy Exponential
   options {
     model "gemini-2.0-flash-thinking-exp-01-21"
+    api_key env.GOOGLE_API_KEY
+  }
+
+}
+
+client<llm> Gemini20Pro {
+  provider google-ai
+  retry_policy Exponential
+  options {
+    model "gemini-2.0-pro-exp-02-05"
     api_key env.GOOGLE_API_KEY
   }
 

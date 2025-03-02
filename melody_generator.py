@@ -9,6 +9,7 @@ from midiutil import MIDIFile
 from fractions import Fraction
 from baml_client.async_client import b as async_b  # Import the async client
 from baml_client.types import NoteDuration, Measure, ModularPhrase, ModularSection, Instrumentation, SongMetadata, SectionPlan, CompositionPlan, CompositionPlanWithMetadata, ModularPiece
+from baml_py import ClientRegistry  # Import ClientRegistry
 
 # No need to define these manually anymore
 # Use them directly in your code
@@ -82,7 +83,7 @@ def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[NoteDuration]
 
     return aggregated
 
-def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan) -> None:
+def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan, model: Optional[str] = None) -> None:
     """
     Saves the given ModularPiece to:
       1) A MIDI file in 'outputs/<DATE> - <TIME>_<SAFE_THEME>/'
@@ -95,6 +96,12 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
       - Soprano (track 3, channel 3)
       - Piano (track 4, channel 4)
       - Percussion (track 5, channel 9) if present
+      
+    Args:
+        piece: The ModularPiece to save
+        theme: The theme used to generate the piece
+        plan: The composition plan
+        model: The model used for generation (optional)
     """
 
     # Validate note durations before processing
@@ -122,7 +129,14 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
     # 2) Create a base filename from the piece metadata
     safe_title = "".join(c for c in piece.metadata.title if c.isalnum() or c in (' ', '-')).strip()
     safe_key = "".join(c for c in piece.metadata.key_signature if c.isalnum() or c in (' ', '-')).strip()
-    base_filename = f"{date_str} - modular - {safe_title} - {safe_key} - {piece.metadata.tempo}bpm"
+    
+    # Include the model name in the filename if provided
+    model_str = "default"
+    if model:
+        # Clean up model name for filename
+        model_str = "".join(c for c in model if c.isalnum() or c in (' ', '-')).strip()
+    
+    base_filename = f"{date_str} - {model_str} - {safe_title} - {safe_key} - {piece.metadata.tempo}bpm"
 
     # 3) Aggregate all notes in a dict of voice -> List[NoteDuration]
     voices = aggregate_modular_piece(piece)
@@ -211,7 +225,7 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
 
     piece_dict["generation_metadata"] = {
         "user_prompt": theme,
-        "model_used": "modular-stepwise",
+        "model_used": model or "default",
         "timestamp": date_str + " " + time_str,
         "composition_plan": plan.dict()
     }
@@ -224,9 +238,27 @@ def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: Compositio
 # 2) Stepwise generation: plan + generate each section
 # ------------------------------------------------------------------
 
-async def plan_and_generate_modular_song(theme: str) -> None:
+async def plan_and_generate_modular_song(theme: str, model: Optional[str] = None) -> None:
+    """
+    Generate a modular song based on the given theme.
+    
+    Args:
+        theme: The thematic prompt for the composition.
+        model: The model/client to use for generation. If None, uses the default client.
+               Examples: "OpenAIGPT4o", "AnthropicSonnet35", "AnthropicHaiku", etc.
+    """
+    # Set up client registry if a model is specified
+    client_registry = None
+    if model:
+        client_registry = ClientRegistry()
+        # Set the specified model as the primary client
+        client_registry.set_primary(model)
+        print(f"Using model: {model}")
+    
     print("\n==== Step 1: Generating the composition plan... ====")
-    plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme)
+    # Pass client_registry to the BAML function
+    baml_options = {"client_registry": client_registry} if client_registry else {}
+    plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme, baml_options=baml_options)
     print("Successfully got CompositionPlan with metadata:")
     print(json.dumps(plan_with_metadata.dict(), indent=2))
 
@@ -249,7 +281,8 @@ async def plan_and_generate_modular_song(theme: str) -> None:
                 overallPlan=plan_dict,
                 theme=theme,
                 total_duration_per_phrase=total_duration_per_phrase,
-                beats_per_measure=beats_per_measure
+                beats_per_measure=beats_per_measure,
+                baml_options=baml_options  # Pass the client registry options
             )
 
             result = await stream.get_final_response()
@@ -286,13 +319,16 @@ async def plan_and_generate_modular_song(theme: str) -> None:
             print(f"Error generating section: {e}")
             return
 
-    # Final piece creation and saving (unchanged)
+    # Final piece creation and saving
     try:
         metadata = SongMetadata.parse_obj(plan_with_metadata.metadata.dict())
         print("All sections generated, aggregating piece...")
         final_piece = ModularPiece(metadata=metadata, sections=all_sections)
         print("Piece aggregated, saving to MIDI...")
-        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan)
+        
+        # Pass the model name to the save function
+        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan, model)
+        
         print("MIDI saved successfully.")
     except Exception as e:
         print(f"Error creating final piece: {e}")
@@ -305,4 +341,43 @@ async def plan_and_generate_modular_song(theme: str) -> None:
 # ------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(plan_and_generate_modular_song("Create a jazzy piece with an intro, verse, and ending"))
+    parser = argparse.ArgumentParser(description="Generate music based on a theme.")
+    parser.add_argument("--theme", type=str, default="Create a jazzy piece with an intro, verse, and ending",
+                        help="Theme for the composition")
+    parser.add_argument("--model", type=str, action="append",
+                        help="Model to use (can specify multiple times)")
+    parser.add_argument("--models", type=str,
+                        help="Comma-separated list of models to run sequentially")
+    args = parser.parse_args()
+    
+    theme = args.theme
+    
+    # Process model arguments
+    models_to_run = []
+    
+    # Add models from --model arguments (can be specified multiple times)
+    if args.model:
+        models_to_run.extend(args.model)
+    
+    # Add models from --models argument (comma-separated list)
+    if args.models:
+        models_list = [m.strip() for m in args.models.split(',') if m.strip()]
+        models_to_run.extend(models_list)
+    
+    # If no models specified, run with default
+    if not models_to_run:
+        # Run with default model
+        asyncio.run(plan_and_generate_modular_song(theme, None))
+    else:
+        # Run sequentially for each model
+        print(f"Running generation sequentially for {len(models_to_run)} models: {', '.join(models_to_run)}")
+        
+        for idx, model in enumerate(models_to_run):
+            print(f"\n=========================================")
+            print(f"MODEL {idx+1} of {len(models_to_run)}: {model}")
+            print(f"=========================================\n")
+            
+            asyncio.run(plan_and_generate_modular_song(theme, model))
+            
+            if idx < len(models_to_run) - 1:
+                print("\nMoving to next model...\n")

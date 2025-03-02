@@ -6,7 +6,7 @@
 class NoteDuration {
   note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
   duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
-  beats_so_far_starting_at_0 float @description("A running sum of all of the note durations for this instrument so far for this measure. We are using this to keep track so we end up with exactly the right amount of beats per measure. Count as a float.")
+  beats_so_far float @description("A running sum of all of the note durations for this instrument so far for this measure. We are using this to keep track so we end up with exactly the right amount of beats per measure. Count as a float. If the first note was 1/4, this value would be .25")
   beats_this_measure_should_have_so_I_know_when_to_stop int @description("Don't stop writing notes until this number of total beats for the measure is reached.")
 }
 
@@ -87,7 +87,7 @@ class ModularPiece {
 /////////////////////////////
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
-  client "AnthropicSonnet37"
+  client "Gemini20Pro"
   prompt #"
 You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
@@ -104,7 +104,6 @@ Return a JSON object that follows the schema (CompositionPlanWithMetadata) exact
 "#
 }
 
-
 // New function: GenerateOneSection
 function GenerateOneSection(
   previousSections: ModularSection[],
@@ -114,7 +113,7 @@ function GenerateOneSection(
   total_duration_per_phrase: float,
   beats_per_measure: float
 ) -> ModularSection {
-  client "AnthropicSonnet37"
+  client "Gemini20Pro"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 
