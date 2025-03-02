@@ -35,6 +35,7 @@ class StreamState(BaseModel, Generic[T]):
 
 
 class Beat(BaseModel):
+    harmony_description: Optional[str] = None
     beat_counter: Optional[str] = None
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
@@ -61,7 +62,6 @@ class Instrumentation(BaseModel):
 class Measure(BaseModel):
     measure_counter: Optional[str] = None
     harmony_plan_for_this_measure: Optional[str] = None
-    phrase_measure_number: Optional[int] = None
     beats: List["Beat"]
 
 class ModularPiece(BaseModel):
@@ -69,7 +69,7 @@ class ModularPiece(BaseModel):
     sections: List["Section"]
 
 class NoteDuration(BaseModel):
-    note: Optional[int] = None
+    note: Optional[str] = None
     duration: Optional[str] = None
 
 class Phrase(BaseModel):

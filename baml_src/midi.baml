@@ -44,11 +44,12 @@ class CompositionPlanWithMetadata {
 }
 
 class NoteDuration {
-  note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
+  note string? @description("For melodic parts (bass, tenor, alto, soprano, piano), the note name like 'C4', 'A#5', 'Bb3', etc. For percussion, the MIDI note number as a string, e.g., '35' for bass drum. Null indicates a rest.")
   duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
 }
 
 class Beat {
+  harmony_description string @description("Harmony for this beat.")
   beat_counter string @description("Count of the current beat being written, starting at one  E.g., Beat 1 of 4")
   bass NoteDuration[] @description("Notes starting at this beat for bass. Leave empty [] when no new note starts.")
   tenor NoteDuration[] @description("Notes starting at this beat for tenor. Leave empty [] when no new note starts.")
@@ -61,7 +62,6 @@ class Beat {
 class Measure {
   measure_counter string @description("Count of the current measure in this phrase, starting at one. E.g., Measure 1 of 8")
   harmony_plan_for_this_measure string @description("Describe how the harmony should develop over the beats of this measure.")
-  phrase_measure_number int @description("Measure number within the phrase, starting from 1")
   beats Beat[] @description("List of beats in this measure. The number of beats should match the time signature.")
 }
 
@@ -155,7 +155,7 @@ IMPORTANT REQUIREMENTS:
 - For each measure, generate {{ beats_per_measure }} beats.
 - For each beat, specify the notes that start precisely at that beat for each voice.
 - Notes can have durations that extend beyond the beat or into subsequent measures, but they must not extend beyond the end of the phrase.
-- Leave empty [] when no new note starts. 
+- Leave empty [] when no new note starts.
 
 Voices:
 - bass
@@ -183,20 +183,19 @@ Technical Requirements:
 - Each phrase must have a total duration of exactly {{ total_duration_per_phrase }} beats for each voice.
 - Ensure that the sum of the durations in each voice's note list (bass, tenor, alto, soprano, piano, and percussion if present) equals exactly {{ total_duration_per_phrase }}.
 - For example, if total_duration_per_phrase is 16.0, then each voice should have notes whose durations sum to 16.0 beats.
-- Use MIDI note numbers:
-  - For melodic parts (60 = middle C)
-  - For percussion (35 = bass drum, 38 = snare, 42 = closed hi-hat, etc.)
-  - null indicates a rest
+- For melodic parts (bass, tenor, alto, soprano, piano), use note names in the format "NoteOctave", where Note is A, B, C, D, E, F, G, optionally followed by # for sharp or b for flat, and Octave is an integer from 0 to 9. For example, "C4" for middle C, "A3", "G#5", "Bb2", etc.
+- For percussion, use MIDI note numbers as strings, e.g., "35" for bass drum, "38" for snare, "42" for closed hi-hat, etc.
+- Use null to indicate a rest.
 - Duration is in beats (1/4 = quarter note, 1/8 = eighth note, 1/16 = sixteenth note. Don't go smaller.)
 - End long phrases with interesting cadences or long notes
 - Ensure variety of rhythms and counterpoint among voices, limit unison rhythms
 - Use piano to keep beat and add interest (e.g. arpeggiated chords)
 - Use percussion to enhance rhythm and groove, but only if it fits the genre
-- Omit percussion for delicate pieces where it wouldn't fit (e.g. nocturne)
+- omit percussion for delicate pieces where it wouldn't fit (e.g. nocturne)
 - The metadata (title, tempo, key/time signatures) should be derived from the plan
 - Don't complain about the number of notes, just do your best.
 
-Title, tempo, key, etc. are found in overallPlan or you can infer them from prior sections. 
+Title, tempo, key, etc. are found in overallPlan or you can infer them from prior sections.
 But do not repeat them here; just create the next section and its phrases.
 
 - THIS IS THE MOST IMPORTANT INSTRUCTION. ENSURE VARIETY OF RHYTHMS AND COUNTERPOINT AMONG VOICES, LIMIT UNISON RHYTHMS.
@@ -210,12 +209,10 @@ Make sure to contrast busy sections or phrases with quieter ones.
 
 Please make sure that you craft beautiful melodies that are memorable in and of themselves. There should be a clear melody and theme the listener remembers from each section. Don't meander.
 
-Don't forget: 
-
+Don't forget:
 - Each phrase in this section must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
 - Each measure in this section must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
 - Total duration per voice in the phrase in this section must be {{ total_duration_per_phrase }} beats.
 - Ensure the total duration of each measure in this section matches {{ beats_per_measure }} exactly.
-
 "#
 }

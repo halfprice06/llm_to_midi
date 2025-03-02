@@ -41,6 +41,7 @@ def all_succeeded(checks: Dict[CheckName, Check]) -> bool:
 
 
 class Beat(BaseModel):
+    harmony_description: str
     beat_counter: str
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
@@ -67,7 +68,6 @@ class Instrumentation(BaseModel):
 class Measure(BaseModel):
     measure_counter: str
     harmony_plan_for_this_measure: str
-    phrase_measure_number: int
     beats: List["Beat"]
 
 class ModularPiece(BaseModel):
@@ -75,7 +75,7 @@ class ModularPiece(BaseModel):
     sections: List["Section"]
 
 class NoteDuration(BaseModel):
-    note: Optional[int] = None
+    note: Optional[str] = None
     duration: str
 
 class Phrase(BaseModel):

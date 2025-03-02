@@ -17,7 +17,7 @@ client<llm> OpenAIo1 {
   retry_policy Exponential
   options {
     model "o1"
-    reasoning_effort "high"
+    reasoning_effort "low"
     temperature 1
     api_key env.OPENAI_API_KEY
 
@@ -41,7 +41,7 @@ client<llm> OpenAIo3Mini {
   retry_policy Exponential
 
   options {
-    reasoning_effort "high"
+    reasoning_effort "low"
     model "o3-mini"
     temperature 1
     api_key env.OPENAI_API_KEY

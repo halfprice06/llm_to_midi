@@ -4,11 +4,11 @@ REM Compare Models - A simple script to demonstrate the multiple model generatio
 echo LLM to MIDI - Model Comparison Script
 echo =========================================
 echo.
-echo This script will generate music using multiple models with the same theme.
+echo This script will generate music using all available models with the same theme.
 echo The models will run concurrently to save time.
 echo.
 
-python main.py --models "AnthropicSonnet37,OpenAIGPT4o,AnthropicHaiku" --theme "Create a playful piano piece with a clear melodic theme and variations. Use a fast tempo and bright major key." --concurrent
+python main.py --models "OpenAIGPT45,OpenAIo1,OpenAIo1Mini,OpenAIo3Mini,OpenAIGPT4o,OpenAIGPT4oMini,HyperbolicDeepseekReasoner,HyperbolicDeepseekV3,AnthropicSonnet35,AnthropicSonnet37,AnthropicOpus,AnthropicHaiku,Gemini15Flash,Gemini15Pro,Gemini20FlashExp,Gemini20FlashThinkingExp,Gemini20Pro" --theme "The opening credits theme to a late 1990s era JRPG." --concurrent
 
 echo.
 echo All models have completed. Check the outputs folder for the generated MIDI files.
