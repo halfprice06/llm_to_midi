@@ -1,13 +1,32 @@
-import openai
 import argparse
-from typing import List, Optional, Tuple
-from pydantic import BaseModel
+import json
+import os
+import datetime
+import asyncio
+from typing import List, Optional, Tuple, Dict, Any
+from pydantic import BaseModel, Field
+from midiutil import MIDIFile
+from baml_client.async_client import b as async_b  # Import the async client
 
 print("Initializing melody generator...")
 
+def preprocess_section_json(section_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Preprocesses the section data to handle null percussion values before validation.
+    If percussion is null, removes it from the phrase entirely.
+    """
+    if not isinstance(section_data, dict):
+        return section_data
+        
+    if "phrases" in section_data and isinstance(section_data["phrases"], list):
+        for phrase in section_data["phrases"]:
+            if isinstance(phrase, dict) and "percussion" in phrase and phrase["percussion"] is None:
+                del phrase["percussion"]
+    
+    return section_data
+
 # ------------------------------------------------------------------
-# 1) Define enhanced data models now accommodating up to 5 voices
-#    and instrument selection for the four main voices.
+# 1) Existing data models
 # ------------------------------------------------------------------
 
 class NoteDuration(BaseModel):
@@ -15,259 +34,343 @@ class NoteDuration(BaseModel):
     duration: float       # Duration in beats.
 
 class Instrumentation(BaseModel):
-    """
-    Holds the program numbers (0..127) for bass, tenor, alto, soprano.
-    Piano is fixed to 0, so we don't need to store it here.
-    """
     bass: int
     tenor: int
     alto: int
     soprano: int
 
 class SongMetadata(BaseModel):
-    title: str                 # A creative title for the piece.
-    tempo: int                 # Recommended tempo in BPM.
-    key_signature: str         # Key of the piece (e.g., "C Major").
-    time_signature: str        # Time signature (e.g., "4/4").
-    instruments: Instrumentation  # New field holding chosen instruments for each voice.
+    title: str
+    tempo: int
+    key_signature: str
+    time_signature: str
+    instruments: Instrumentation
 
-class Phrase(BaseModel):
+# ------------------------------------------------------------------
+# 2) NEW data models for flexible composition plan + final modular piece
+# ------------------------------------------------------------------
+
+class SectionPlan(BaseModel):
+    label: str
+    description: Optional[str]
+    number_of_phrases: int
+    harmonic_direction: str
+    rhythmic_direction: str
+    melodic_direction: str
+
+class CompositionPlan(BaseModel):
+    plan_title: str
+    style: Optional[str]
+    sections: List[SectionPlan]
+
+class CompositionPlanWithMetadata(BaseModel):
+    plan: CompositionPlan
+    metadata: SongMetadata
+
+class ModularPhrase(BaseModel):
     phrase_label: str
-    # Each phrase now can have up to 5 separate melodic lines.
+    phrase_description: str
+    lyrics: Optional[str]
     bass: List[NoteDuration]
     tenor: List[NoteDuration]
     alto: List[NoteDuration]
     soprano: List[NoteDuration]
     piano: List[NoteDuration]
+    percussion: Optional[List[NoteDuration]] = Field(default=None)
 
-class Section(BaseModel):
-    section_label: str                # e.g., "A1", "B1", etc.
-    phrases: List[Phrase]            # Each section has one or more phrases.
+class ModularSection(BaseModel):
+    section_label: str
+    section_description: str
+    harmonic_direction: str
+    rhythmic_direction: str
+    melodic_direction: str
+    phrases: List[ModularPhrase]
 
-class RoundedBinaryForm(BaseModel):
-    """
-    A typical rounded binary form has three overall sections:
-      1) A (often repeated)
-      2) B (often repeated)
-      3) A' (a return of the main theme, possibly varied)
-
-    Each section can be subdivided into subsections (A1, A2, B1, B2, etc.),
-    and each subsection can hold multiple phrases. Each phrase can have
-    up to 5 voices: bass, tenor, alto, soprano, and piano.
-
-    Now, each of the four main voices (bass, tenor, alto, soprano) can
-    have a chosen instrument via SongMetadata.instruments, while piano
-    remains fixed to program 0.
-    """
-    sectionA: List[Section]
-    sectionB: List[Section]
-    sectionA_prime: List[Section]
-
-class RoundedBinaryPiece(BaseModel):
+class ModularPiece(BaseModel):
     metadata: SongMetadata
-    form: RoundedBinaryForm
-
-print("Data models for Rounded Binary Form (5 voices + instrumentation) defined successfully.")
+    sections: List[ModularSection]
 
 # ------------------------------------------------------------------
-# 2) The function that calls the OpenAI API with advanced music theory instructions.
-#    Now also instructs the model to fill in instrumentation choices for bass/tenor/alto/soprano.
+# 3) Helper functions to convert a ModularPiece to MIDI
 # ------------------------------------------------------------------
 
-def generate_melodies(model_name: str = "o3-mini", additional_instructions: str = "") -> Tuple[RoundedBinaryPiece, str]:
+def remove_c_style_comments(json_str: str) -> str:
     """
-    Calls the OpenAI API to generate a short classical-style piece in rounded binary form,
-    up to 5 voices (bass, tenor, alto, soprano, and piano). Also requests that the model
-    specify an instrument (MIDI program number) for bass, tenor, alto, and soprano.
-    The piano voice is always instrument 0.
-
-    Args:
-        model_name: The OpenAI model to use (default: "o3-mini")
-        additional_instructions: Optional instructions for the composition
-
-    Returns: (RoundedBinaryPiece, raw_json_str)
+    Removes C-style comments (/* ... */) from a JSON string.
+    This is needed because sometimes the LLM includes explanatory comments
+    which break JSON parsing.
     """
-    print("\nGenerating new musical piece in rounded binary form with 5 voices + instrumentation...")
+    import re
+    # Remove multi-line comments
+    json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+    return json_str
+
+def aggregate_modular_piece(piece: ModularPiece) -> Dict[str, List[NoteDuration]]:
+    """
+    Aggregates all voice lines from each section/phrase into
+    a single contiguous list for each voice (Bass, Tenor, Alto,
+    Soprano, Piano, Percussion).
+    """
+    aggregated = {
+        "Bass": [],
+        "Tenor": [],
+        "Alto": [],
+        "Soprano": [],
+        "Piano": [],
+        "Percussion": []
+    }
+
+    # Collect notes in the order they appear in each section/phrase
+    for section in piece.sections:
+        for phrase in section.phrases:
+            aggregated["Bass"].extend(phrase.bass)
+            aggregated["Tenor"].extend(phrase.tenor)
+            aggregated["Alto"].extend(phrase.alto)
+            aggregated["Soprano"].extend(phrase.soprano)
+            aggregated["Piano"].extend(phrase.piano)
+            if phrase.percussion:
+                aggregated["Percussion"].extend(phrase.percussion)
+
+    # If no percussion notes were ever added, remove that key
+    if not aggregated["Percussion"]:
+        del aggregated["Percussion"]
+
+    return aggregated
+
+def save_modular_piece_to_midi(piece: ModularPiece, theme: str, plan: CompositionPlan) -> None:
+    """
+    Saves the given ModularPiece to:
+      1) A MIDI file in 'outputs/<DATE> - <TIME>_<SAFE_THEME>/'
+      2) A JSON log file in the same folder
+
+    The MIDI file has multiple tracks:
+      - Bass (track 0, channel 0)
+      - Tenor (track 1, channel 1)
+      - Alto (track 2, channel 2)
+      - Soprano (track 3, channel 3)
+      - Piano (track 4, channel 4)
+      - Percussion (track 5, channel 9) if present
+    """
+
+    # Validate note durations before processing
+    def validate_notes(notes: List[NoteDuration], voice_name: str) -> List[NoteDuration]:
+        validated = []
+        for i, nd in enumerate(notes):
+            if nd.duration <= 0:
+                print(f"Warning: Found {voice_name} note at position {i} with invalid duration {nd.duration}. Skipping.")
+                continue
+            if nd.note is not None and (nd.note < 0 or nd.note > 127):
+                print(f"Warning: Found {voice_name} note at position {i} with invalid MIDI note number {nd.note}. Skipping.")
+                continue
+            validated.append(nd)
+        return validated
+
+    # 1) Create the output folder (timestamped + sanitized theme)
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    time_str = datetime.datetime.now().strftime("%H%M%S")
+
+    safe_theme = "".join(c for c in theme if c.isalnum() or c in (' ', '-')).strip()
+    safe_theme = safe_theme.replace(' ', '_')
+    theme_folder = os.path.join("outputs", f"{date_str} - {time_str}_{safe_theme}")
+    os.makedirs(theme_folder, exist_ok=True)
+
+    # 2) Create a base filename from the piece metadata
+    safe_title = "".join(c for c in piece.metadata.title if c.isalnum() or c in (' ', '-')).strip()
+    safe_key = "".join(c for c in piece.metadata.key_signature if c.isalnum() or c in (' ', '-')).strip()
+    base_filename = f"{date_str} - modular - {safe_title} - {safe_key} - {piece.metadata.tempo}bpm"
+
+    # 3) Aggregate all notes in a dict of voice -> List[NoteDuration]
+    voices = aggregate_modular_piece(piece)
+
+    # Validate all notes before proceeding
+    for voice_name in list(voices.keys()):
+        voices[voice_name] = validate_notes(voices[voice_name], voice_name)
+        if not voices[voice_name]:
+            print(f"Warning: {voice_name} track has no valid notes after validation. Removing track.")
+            del voices[voice_name]
+
+    # 4) Create the MIDI file
+    num_tracks = len(voices)  # Only create tracks for voices that have valid notes
+    if num_tracks == 0:
+        raise ValueError("No valid notes found in any voice part after validation.")
+        
+    midi_file = MIDIFile(num_tracks)
+
+    # Add the tempo to each track
+    for i in range(num_tracks):
+        midi_file.addTempo(i, 0, piece.metadata.tempo)
+
+    # Program changes (instrumentation)
+    bass_prog = piece.metadata.instruments.bass
+    tenor_prog = piece.metadata.instruments.tenor
+    alto_prog = piece.metadata.instruments.alto
+    soprano_prog = piece.metadata.instruments.soprano
+    piano_prog = 0  # piano is always 0
+
+    # Track to channel mapping (excluding any removed voices)
+    track_info = []
+    if "Bass" in voices:
+        track_info.append(("Bass", 0, bass_prog))
+    if "Tenor" in voices:
+        track_info.append(("Tenor", 1, tenor_prog))
+    if "Alto" in voices:
+        track_info.append(("Alto", 2, alto_prog))
+    if "Soprano" in voices:
+        track_info.append(("Soprano", 3, soprano_prog))
+    if "Piano" in voices:
+        track_info.append(("Piano", 4, piano_prog))
+    if "Percussion" in voices:
+        track_info.append(("Percussion", 9, None))  # No program change for percussion
+
+    # Add program changes for each track
+    for i, (voice_name, channel, program) in enumerate(track_info):
+        if program is not None:  # Skip program change for percussion
+            midi_file.addProgramChange(i, channel, 0, program)
+
+    # 5) Write out the notes for each voice
+    for i, (voice_name, channel, _) in enumerate(track_info):
+        time_pos = 0.0
+        track_notes = voices[voice_name]
+
+        for nd in track_notes:
+            if nd.note is not None:
+                try:
+                    midi_file.addNote(
+                        track=i,
+                        channel=channel,
+                        pitch=nd.note,
+                        time=time_pos,
+                        duration=max(0.1, nd.duration),  # Ensure minimum duration
+                        volume=100
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to add note in {voice_name} track at position {time_pos}: {e}")
+            time_pos += nd.duration
+
+    # 6) Save the MIDI file
+    midi_filename = os.path.join(theme_folder, f"{base_filename}.mid")
+    print(f"\nSaving MIDI file to: {midi_filename}")
+    with open(midi_filename, "wb") as f_out:
+        try:
+            midi_file.writeFile(f_out)
+            print("MIDI file saved successfully.")
+        except Exception as e:
+            print(f"Error saving MIDI file: {e}")
+            raise
+
+    # 7) Save the JSON log with the raw piece data
+    piece_dict = piece.dict()
+    log_filename = os.path.join(theme_folder, f"{base_filename}.json")
+    print(f"Saving JSON log to: {log_filename}")
+
+    piece_dict["generation_metadata"] = {
+        "user_prompt": theme,
+        "model_used": "modular-stepwise",
+        "timestamp": date_str + " " + time_str,
+        "composition_plan": plan.dict()
+    }
+
+    with open(log_filename, "w", encoding="utf-8") as f_json:
+        json.dump(piece_dict, f_json, indent=2)
+    print("JSON log saved successfully.")
+
+# ------------------------------------------------------------------
+# 4) Stepwise generation: plan + generate each section
+# ------------------------------------------------------------------
+
+async def plan_and_generate_modular_song(theme: str) -> None:
+    """
+    1) Calls BAML function to generate a CompositionPlan
+    2) Iterates through the plan sections one by one:
+       - For each section, calls the new BAML function GenerateOneSection
+         with the previously generated sections (for context).
+    3) Constructs the final piece from the incremental sections
+    4) Saves the piece to MIDI + JSON
+    """
+
+    print("\n==== Step 1: Generating the composition plan... ====")
     try:
-        print(f"Using OpenAI model: {model_name}")
-
-        # System message: instructions for multi-voice classical composition.
-        system_msg = """
-You are an expert composer well-versed in music theory.
-Compose a short piece in rounded binary form (A, B, A').
-Each section (A, B, A') can be further subdivided into one or more subsections (A1, A2, etc.).
-Each subsection must contain a minimum of two phrases, and each phrase can have up to 5 voices:
-  - bass
-  - tenor
-  - alto
-  - soprano
-  - piano
-
-Additionally, choose an appropriate MIDI instrument for each of the four voices:
-  - bass
-  - tenor
-  - alto
-  - soprano
-The piano voice is always instrument 0 (Acoustic Grand).
-
-Use varied rhythms for each part. Keep each part coherent, with independent but harmonically compatible lines. Use good voice leading between the parts, avoid parallel fifths and octaves, write interesting motifs, and follow the rules of Western tonality and music theory. 
-
-Ensure there is a lot of variety between the phrases. The final A' must restate A's theme.
-It is ok to allow parts to rest at times to give the other parts a chance to shine and the listener a chance to catch their breath.
-
-"""
-
-
-
-        # User message: explicit JSON schema instructions, including the new instrumentation field,
-        # plus any optional user instructions appended.
-        user_msg = f"""
-Generate a short musical piece in rounded binary form, JSON only, matching this schema:
-
-{{
-  "metadata": {{
-    "title": <string>,
-    "tempo": <integer>,
-    "key_signature": <string>,
-    "time_signature": <string>,
-    "instruments": {{
-      "bass": <int>,       # MIDI program number (0..127)
-      "tenor": <int>,
-      "alto": <int>,
-      "soprano": <int>
-    }}
-  }},
-  "form": {{
-    "sectionA": [
-      {{
-        "section_label": <string>,
-        "phrases": [
-          {{
-            "phrase_label": <string>,
-            "bass": [
-              {{"note": <int or null>, "duration": <float>}}, ...
-            ],
-            "tenor": [
-              {{"note": <int or null>, "duration": <float>}}, ...
-            ],
-            "alto": [
-              {{"note": <int or null>, "duration": <float>}}, ...
-            ],
-            "soprano": [
-              {{"note": <int or null>, "duration": <float>}}, ...
-            ],
-            "piano": [
-              {{"note": <int or null>, "duration": <float>}}, ...
-            ]
-          }},
-          ...
-        ]
-      }},
-      ...
-    ],
-    "sectionB": [...],
-    "sectionA_prime": [...]
-  }}
-}}
-
-Notes:
-- Fill in a program number for each of bass, tenor, alto, soprano.
-  Piano is fixed to program 0.
-- Each section must contain a minimum of two phrases.
-- Use up to 5 voices (bass, tenor, alto, soprano, piano).
-- "note" is a MIDI note number (60=middle C) or null for rest.
-- "duration" is in beats (1.0=quarter, 0.5=eighth, etc.).
-- End each phrase with an interesting cadence or a long note.
-- The final A' must restate A's theme.
-- DO NOT give all parts the same rhythms; create variety and counterpoint.
-- The piano is used to help keep the beat or add percussive interest.
-- Additional user instructions:
-{additional_instructions}
-"""
-
-        print("Sending request to OpenAI API...")
-        completion = openai.beta.chat.completions.parse(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_msg},
-            ],
-            reasoning_effort="high",
-            response_format=RoundedBinaryPiece,
-            temperature=1,
-        )
-
-        print("Successfully received response from OpenAI")
-        # Store both the parsed object and the raw JSON string
-        raw_json_str = completion.choices[0].message.content
-        result = completion.choices[0].message.parsed
-        return result, raw_json_str
-
+        plan_with_metadata = await async_b.GenerateCompositionPlan(theme=theme)
+        print("Successfully got CompositionPlan with metadata:")
+        print(json.dumps(plan_with_metadata.dict(), indent=2))
     except Exception as e:
-        print("OpenAI API error or parsing error:", e)
-        print("Falling back to default 5-voice piece with default instruments...")
+        print(f"Error generating composition plan: {e}")
+        return
 
-        # Fallback instruments (like the old defaults):
-        fallback_instruments = Instrumentation(
-            bass=32,     # Acoustic Bass
-            tenor=42,    # Cello
-            alto=71,     # Clarinet
-            soprano=73   # Flute
-        )
-        fallback_metadata = SongMetadata(
-            title="Untitled Rounded Binary",
-            tempo=120,
-            key_signature="C Major",
-            time_signature="4/4",
-            instruments=fallback_instruments
-        )
-        fallback_form = RoundedBinaryForm(
-            sectionA=[Section(section_label="A1", phrases=[])],
-            sectionB=[Section(section_label="B1", phrases=[])],
-            sectionA_prime=[Section(section_label="A1_prime", phrases=[])]
-        )
-        fallback_piece = RoundedBinaryPiece(metadata=fallback_metadata, form=fallback_form)
+    print("\n==== Step 2: Generating the final piece section-by-section... ====")
 
-        # Return the fallback piece plus an empty string for raw JSON
-        return fallback_piece, ""
+    # We'll accumulate the final sections in a list
+    all_sections: List[ModularSection] = []
+
+    # For each section in the plan, call GenerateOneSection
+    for idx, plan_section in enumerate(plan_with_metadata.plan.sections):
+        print(f"\n-- Generating Section #{idx+1}: {plan_section.label} --")
+        try:
+            # We pass along what we've generated so far for context
+            previous_sections = [s.dict() for s in all_sections]  # convert to dict for BAML
+            section_plan_dict = plan_section.dict()
+            plan_dict = plan_with_metadata.dict()
+
+            # Ensure section_description is set from the plan's description
+            if plan_section.description:
+                section_plan_dict["description"] = plan_section.description
+            else:
+                section_plan_dict["description"] = f"Section {plan_section.label}"
+
+            # BAML call with streaming:
+            stream = async_b.stream.GenerateOneSection(
+                previousSections=previous_sections,
+                nextSectionPlan=section_plan_dict,
+                overallPlan=plan_dict,
+                theme=theme
+            )
+            result = await stream.get_final_response()
+
+            # Could come back as a dict or a JSON string. Handle both.
+            if isinstance(result, str):
+                result = remove_c_style_comments(result)
+                # Preprocess to handle null percussion before parsing
+                result_dict = json.loads(result)
+                processed_result = preprocess_section_json(result_dict)
+                generated_section = ModularSection.parse_obj(processed_result)
+            else:
+                # If it's already a dict, still preprocess it
+                processed_result = preprocess_section_json(result.dict())
+                generated_section = ModularSection.parse_obj(processed_result)
+
+            # Save to all_sections
+            all_sections.append(generated_section)
+            print(f"  Section '{generated_section.section_label}' generated with {len(generated_section.phrases)} phrases.")
+        except Exception as e:
+            print(f"Error generating section: {e}")
+            return
+
+    # Create the final piece using the metadata from the plan
+    try:
+        # Parse the metadata from the plan
+        if isinstance(plan_with_metadata.metadata, dict):
+            metadata_dict = plan_with_metadata.metadata
+        else:
+            metadata_dict = plan_with_metadata.metadata.dict()
+
+        # Create the SongMetadata object directly from the dictionary
+        metadata = SongMetadata.parse_obj(metadata_dict)
+
+        final_piece = ModularPiece(
+            metadata=metadata,
+            sections=all_sections
+        )
+
+        # Save the piece
+        save_modular_piece_to_midi(final_piece, theme, plan_with_metadata.plan)
+    except Exception as e:
+        print(f"Error creating final piece: {e}")
+        print("Raw metadata structure:", json.dumps(plan_with_metadata.metadata if isinstance(plan_with_metadata.metadata, dict) else plan_with_metadata.metadata.dict(), indent=2))
+        return
+
+# ------------------------------------------------------------------
+# 5) Optional: If you run this file directly, test with a sample theme
+# ------------------------------------------------------------------
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate melodies using OpenAI')
-    parser.add_argument('--model', type=str, default='o3-mini',
-                      help='OpenAI model to use (default: o3-mini)')
-    args = parser.parse_args()
-
-    print("\nTesting melody generator (rounded binary form, up to 5 voices + instrumentation)...")
-    piece_obj, raw_json = generate_melodies(model_name=args.model, additional_instructions="Sample user instructions.")
-    print("\nGenerated piece details:")
-
-    print("METADATA:", piece_obj.metadata)
-    for sec in piece_obj.form.sectionA:
-        print(f"\nSection A subsection label: {sec.section_label}")
-        for phr in sec.phrases:
-            print(f"  Phrase label: {phr.phrase_label}")
-            print(f"    Bass: {phr.bass}")
-            print(f"    Tenor: {phr.tenor}")
-            print(f"    Alto: {phr.alto}")
-            print(f"    Soprano: {phr.soprano}")
-            print(f"    Piano: {phr.piano}")
-
-    for sec in piece_obj.form.sectionB:
-        print(f"\nSection B subsection label: {sec.section_label}")
-        for phr in sec.phrases:
-            print(f"  Phrase label: {phr.phrase_label}")
-            print(f"    Bass: {phr.bass}")
-            print(f"    Tenor: {phr.tenor}")
-            print(f"    Alto: {phr.alto}")
-            print(f"    Soprano: {phr.soprano}")
-            print(f"    Piano: {phr.piano}")
-
-    for sec in piece_obj.form.sectionA_prime:
-        print(f"\nSection A' subsection label: {sec.section_label}")
-        for phr in sec.phrases:
-            print(f"  Phrase label: {phr.phrase_label}")
-            print(f"    Bass: {phr.bass}")
-            print(f"    Tenor: {phr.tenor}")
-            print(f"    Alto: {phr.alto}")
-            print(f"    Soprano: {phr.soprano}")
-            print(f"    Piano: {phr.piano}")
+    asyncio.run(plan_and_generate_modular_song("Create a jazzy piece with an intro, verse, and ending"))

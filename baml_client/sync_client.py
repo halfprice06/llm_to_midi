@@ -47,11 +47,11 @@ class BamlSyncClient:
       return self.__stream_client
 
     
-    def GenerateMusic_AnthropicSonnet(
+    def GenerateCompositionPlan(
         self,
-        theme: str,prompt: str,
+        theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
+    ) -> types.CompositionPlanWithMetadata:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -60,21 +60,21 @@ class BamlSyncClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = self.__runtime.call_function_sync(
-        "GenerateMusic_AnthropicSonnet",
+        "GenerateCompositionPlan",
         {
-          "theme": theme,"prompt": prompt,
+          "theme": theme,
         },
         self.__ctx_manager.get(),
         tb,
         __cr__,
       )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+      return cast(types.CompositionPlanWithMetadata, raw.cast_to(types, types, partial_types, False))
     
-    def GenerateMusic_DeepseekReasoner(
+    def GenerateOneSection(
         self,
-        theme: str,prompt: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
+    ) -> types.ModularSection:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -83,107 +83,15 @@ class BamlSyncClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = self.__runtime.call_function_sync(
-        "GenerateMusic_DeepseekReasoner",
+        "GenerateOneSection",
         {
-          "theme": theme,"prompt": prompt,
+          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,
         },
         self.__ctx_manager.get(),
         tb,
         __cr__,
       )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
-    
-    def GenerateMusic_OpenAIGPT4o(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.call_function_sync(
-        "GenerateMusic_OpenAIGPT4o",
-        {
-          "theme": theme,"prompt": prompt,
-        },
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
-    
-    def GenerateMusic_OpenAIo1(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.call_function_sync(
-        "GenerateMusic_OpenAIo1",
-        {
-          "theme": theme,"prompt": prompt,
-        },
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
-    
-    def GenerateMusic_OpenAIo1Mini(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.call_function_sync(
-        "GenerateMusic_OpenAIo1Mini",
-        {
-          "theme": theme,"prompt": prompt,
-        },
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
-    
-    def GenerateMusic_OpenAIo3Mini(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.RoundedBinaryPiece:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.call_function_sync(
-        "GenerateMusic_OpenAIo3Mini",
-        {
-          "theme": theme,"prompt": prompt,
-        },
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-      return cast(types.RoundedBinaryPiece, raw.cast_to(types, types, partial_types, False))
+      return cast(types.ModularSection, raw.cast_to(types, types, partial_types, False))
     
 
 
@@ -197,11 +105,11 @@ class BamlStreamClient:
       self.__ctx_manager = ctx_manager
 
     
-    def GenerateMusic_AnthropicSonnet(
+    def GenerateCompositionPlan(
         self,
-        theme: str,prompt: str,
+        theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+    ) -> baml_py.BamlSyncStream[partial_types.CompositionPlanWithMetadata, types.CompositionPlanWithMetadata]:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -210,10 +118,9 @@ class BamlStreamClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_AnthropicSonnet",
+        "GenerateCompositionPlan",
         {
           "theme": theme,
-          "prompt": prompt,
         },
         None,
         self.__ctx_manager.get(),
@@ -221,18 +128,18 @@ class BamlStreamClient:
         __cr__,
       )
 
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+      return baml_py.BamlSyncStream[partial_types.CompositionPlanWithMetadata, types.CompositionPlanWithMetadata](
         raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        lambda x: cast(partial_types.CompositionPlanWithMetadata, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.CompositionPlanWithMetadata, x.cast_to(types, types, partial_types, False)),
         self.__ctx_manager.get(),
       )
     
-    def GenerateMusic_DeepseekReasoner(
+    def GenerateOneSection(
         self,
-        theme: str,prompt: str,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
+    ) -> baml_py.BamlSyncStream[partial_types.ModularSection, types.ModularSection]:
       __tb__ = baml_options.get("tb", None)
       if __tb__ is not None:
         tb = __tb__._tb # type: ignore (we know how to use this private attribute)
@@ -241,10 +148,12 @@ class BamlStreamClient:
       __cr__ = baml_options.get("client_registry", None)
 
       raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_DeepseekReasoner",
+        "GenerateOneSection",
         {
+          "previousSections": previousSections,
+          "nextSectionPlan": nextSectionPlan,
+          "overallPlan": overallPlan,
           "theme": theme,
-          "prompt": prompt,
         },
         None,
         self.__ctx_manager.get(),
@@ -252,134 +161,10 @@ class BamlStreamClient:
         __cr__,
       )
 
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
+      return baml_py.BamlSyncStream[partial_types.ModularSection, types.ModularSection](
         raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
-        self.__ctx_manager.get(),
-      )
-    
-    def GenerateMusic_OpenAIGPT4o(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_OpenAIGPT4o",
-        {
-          "theme": theme,
-          "prompt": prompt,
-        },
-        None,
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
-        raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
-        self.__ctx_manager.get(),
-      )
-    
-    def GenerateMusic_OpenAIo1(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_OpenAIo1",
-        {
-          "theme": theme,
-          "prompt": prompt,
-        },
-        None,
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
-        raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
-        self.__ctx_manager.get(),
-      )
-    
-    def GenerateMusic_OpenAIo1Mini(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_OpenAIo1Mini",
-        {
-          "theme": theme,
-          "prompt": prompt,
-        },
-        None,
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
-        raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
-        self.__ctx_manager.get(),
-      )
-    
-    def GenerateMusic_OpenAIo3Mini(
-        self,
-        theme: str,prompt: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece]:
-      __tb__ = baml_options.get("tb", None)
-      if __tb__ is not None:
-        tb = __tb__._tb # type: ignore (we know how to use this private attribute)
-      else:
-        tb = None
-      __cr__ = baml_options.get("client_registry", None)
-
-      raw = self.__runtime.stream_function_sync(
-        "GenerateMusic_OpenAIo3Mini",
-        {
-          "theme": theme,
-          "prompt": prompt,
-        },
-        None,
-        self.__ctx_manager.get(),
-        tb,
-        __cr__,
-      )
-
-      return baml_py.BamlSyncStream[partial_types.RoundedBinaryPiece, types.RoundedBinaryPiece](
-        raw,
-        lambda x: cast(partial_types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, True)),
-        lambda x: cast(types.RoundedBinaryPiece, x.cast_to(types, types, partial_types, False)),
+        lambda x: cast(partial_types.ModularSection, x.cast_to(types, types, partial_types, True)),
+        lambda x: cast(types.ModularSection, x.cast_to(types, types, partial_types, False)),
         self.__ctx_manager.get(),
       )
     
