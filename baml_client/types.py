@@ -85,6 +85,8 @@ class ModularSection(BaseModel):
 class NoteDuration(BaseModel):
     note: Optional[int] = None
     duration: str
+    beats_so_far_starting_at_0: float
+    beats_this_measure_should_have_so_I_know_when_to_stop: int
 
 class SectionPlan(BaseModel):
     label: str

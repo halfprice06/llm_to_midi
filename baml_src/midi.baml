@@ -6,6 +6,8 @@
 class NoteDuration {
   note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
   duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
+  beats_so_far_starting_at_0 float @description("A running sum of all of the note durations for this instrument so far for this measure. We are using this to keep track so we end up with exactly the right amount of beats per measure. Count as a float.")
+  beats_this_measure_should_have_so_I_know_when_to_stop int @description("Don't stop writing notes until this number of total beats for the measure is reached.")
 }
 
 // Holds program numbers (0-127) for different voices
@@ -85,7 +87,7 @@ class ModularPiece {
 /////////////////////////////
 
 function GenerateCompositionPlan(theme: string) -> CompositionPlanWithMetadata {
-  client "HyperbolicDeepseekV3"
+  client "AnthropicSonnet37"
   prompt #"
 You are an expert music composer and theorist. The user wants to plan the structure of a piece
 BEFORE generating any actual note-level content.
@@ -112,7 +114,7 @@ function GenerateOneSection(
   total_duration_per_phrase: float,
   beats_per_measure: float
 ) -> ModularSection {
-  client "HyperbolicDeepseekV3"
+  client "AnthropicSonnet37"
   prompt #"
 You are an expert music composer well-versed in music theory. The user has already decided on the piece structure via the following plan:
 
@@ -140,12 +142,12 @@ IMPORTANT REQUIREMENTS:
 - Each phrase must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
 - Each measure must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
 - Total duration per voice in the phrase must be {{ total_duration_per_phrase }} beats.
-- Use fractional durations as strings (e.g., '1/2' for half a beat, '1/3' for a third of a beat) instead of decimal approximations.
+- Use fractional durations as strings (e.g., '1/2' for half a beat, '1/3' for a third of a beat) instead of decimal approximations. Do not use smaller than 1/16 notes.
 
 **When generating measures:**
 - Keep each measure self-contained; notes should not span across measures.
 - Use rests (note: null) to fill measures if needed.
-- Durations must be strings representing fractions (e.g., '1/2', '1/3', '1').
+- Durations must be strings representing fractions (e.g., '1/2', '1/3', '1'). Do not use smaller than 1/16 notes.
 - Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
 
 Voices:
@@ -203,10 +205,10 @@ Please make sure that you craft beautiful melodies that are memorable in and of 
 
 Don't forget: 
 
-- Each phrase must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
-- Each measure must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
-- Total duration per voice in the phrase must be {{ total_duration_per_phrase }} beats.
-- Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
+- Each phrase in this section must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
+- Each measure in this section must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
+- Total duration per voice in the phrase in this section must be {{ total_duration_per_phrase }} beats.
+- Ensure the total duration of each measure in this section matches {{ beats_per_measure }} exactly.
 
 "#
 }
