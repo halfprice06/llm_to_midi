@@ -75,7 +75,7 @@ class BamlAsyncClient:
     
     async def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
         baml_options: BamlCallOptions = {},
     ) -> types.ModularSection:
       __tb__ = baml_options.get("tb", None)
@@ -88,7 +88,7 @@ class BamlAsyncClient:
       raw = await self.__runtime.call_function(
         "GenerateOneSection",
         {
-          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,"total_duration_per_phrase": total_duration_per_phrase,
+          "previousSections": previousSections,"nextSectionPlan": nextSectionPlan,"overallPlan": overallPlan,"theme": theme,"total_duration_per_phrase": total_duration_per_phrase,"beats_per_measure": beats_per_measure,
         },
         self.__ctx_manager.get(),
         tb,
@@ -139,7 +139,7 @@ class BamlStreamClient:
     
     def GenerateOneSection(
         self,
-        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,
+        previousSections: List[types.ModularSection],nextSectionPlan: types.SectionPlan,overallPlan: types.CompositionPlanWithMetadata,theme: str,total_duration_per_phrase: float,beats_per_measure: float,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlStream[partial_types.ModularSection, types.ModularSection]:
       __tb__ = baml_options.get("tb", None)
@@ -157,6 +157,7 @@ class BamlStreamClient:
           "overallPlan": overallPlan,
           "theme": theme,
           "total_duration_per_phrase": total_duration_per_phrase,
+          "beats_per_measure": beats_per_measure,
         },
         None,
         self.__ctx_manager.get(),

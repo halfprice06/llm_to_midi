@@ -5,7 +5,7 @@
 // Represents the duration and pitch of a musical note
 class NoteDuration {
   note int? @description("MIDI note number, null indicates a rest. For percussion (channel 10), this represents the drum/percussion instrument number.")
-  duration float @description("Duration in beats")
+  duration string @description("Duration in beats, expressed as a fraction like '1/2', '1/3', '2', etc.")
 }
 
 // Holds program numbers (0-127) for different voices
@@ -49,16 +49,21 @@ class CompositionPlanWithMetadata {
   metadata SongMetadata @description("The song metadata including title, tempo, key signature, time signature and instruments")
 }
 
-class ModularPhrase {
-  phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
-  phrase_description string @description("A textual description of the content of the phrase. The kind of chords, the shape of the melody, the intensity, the rhythms, etc.")
-  lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
+class Measure {
+  phrase_measure_number int @description("Counting from 1 up to the last measure required for the phrase.")
   bass NoteDuration[] @description("Bass line - typically provides harmonic foundation with slower rhythmic movement, often using root notes and fifths")
   tenor NoteDuration[] @description("Tenor voice - provides inner harmony, can move in parallel or contrary motion with other voices, often harmonizes with alto")
   alto NoteDuration[] @description("Alto voice - middle voice that helps fill out harmonies, frequently moves in parallel thirds with soprano or tenor")
   soprano NoteDuration[] @description("Soprano/lead voice - carries the main melody, typically has the highest pitch and most prominent melodic movement")
   piano NoteDuration[] @description("Piano part - can provide harmonic support, melodic lines, or both through a combination of chords and melodic passages. Arpeggios work well here.")
   percussion NoteDuration[]? @description("Optional percussion track (channel 10) - uses General MIDI drum map note numbers for rhythmic accompaniment")
+}
+
+class ModularPhrase {
+  phrase_label string @description("A musical phrase is a group of notes that create a musical idea. Phrases are similar to sentences in that they have a beginning and end, and they convey a specific meaning. In common practice (but not always), phrases are often four bars or measures long culminating in a more or less definite cadence.")
+  phrase_description string @description("A textual description of the content of the phrase. The kind of chords, the shape of the melody, the intensity, the rhythms, etc.")
+  lyrics string? @description("Optional lyrics for the phrase. If provided, the lyrics should be in the same language as the theme.")
+  measures Measure[] @description("List of measures in this phrase. Must have exactly measures_per_phrase measures.")
 }
 
 class ModularSection {
@@ -104,7 +109,8 @@ function GenerateOneSection(
   nextSectionPlan: SectionPlan,
   overallPlan: CompositionPlanWithMetadata,
   theme: string,
-  total_duration_per_phrase: float
+  total_duration_per_phrase: float,
+  beats_per_measure: float
 ) -> ModularSection {
   client "AnthropicSonnet37"
   prompt #"
@@ -131,6 +137,19 @@ IMPORTANT REQUIREMENTS:
 - For the percussion field in each phrase:
   - If you want percussion, include it as a non-empty list of NoteDuration objects
   - If you don't want percussion, OMIT the field entirely (do not set it to null or empty list)
+- Each phrase must have exactly {{ nextSectionPlan.measures_per_phrase }} measures.
+- Each measure must contain notes for each voice (bass, tenor, alto, soprano, piano, and optionally percussion) summing to {{ beats_per_measure }} beats.
+- Total duration per voice in the phrase must be {{ total_duration_per_phrase }} beats.
+- Use fractional durations as strings (e.g., '1/2' for half a beat, '1/3' for a third of a beat) instead of decimal approximations.
+
+**When generating measures:**
+- Keep each measure self-contained; notes should not span across measures.
+- Use rests (note: null) to fill measures if needed.
+- Durations must be strings representing fractions (e.g., '1/2', '1/3', '1').
+- Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
+
+**Technical Details:**
+- Ensure the total duration of each measure matches {{ beats_per_measure }} exactly.
 
 Voices:
 - bass

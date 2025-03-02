@@ -55,16 +55,20 @@ class Instrumentation(BaseModel):
     alto: int
     soprano: int
 
-class ModularPhrase(BaseModel):
-    phrase_label: str
-    phrase_description: str
-    lyrics: Optional[str] = None
+class Measure(BaseModel):
+    phrase_measure_number: int
     bass: List["NoteDuration"]
     tenor: List["NoteDuration"]
     alto: List["NoteDuration"]
     soprano: List["NoteDuration"]
     piano: List["NoteDuration"]
     percussion: Optional[List["NoteDuration"]] = None
+
+class ModularPhrase(BaseModel):
+    phrase_label: str
+    phrase_description: str
+    lyrics: Optional[str] = None
+    measures: List["Measure"]
 
 class ModularPiece(BaseModel):
     metadata: "SongMetadata"
@@ -80,7 +84,7 @@ class ModularSection(BaseModel):
 
 class NoteDuration(BaseModel):
     note: Optional[int] = None
-    duration: float
+    duration: str
 
 class SectionPlan(BaseModel):
     label: str
