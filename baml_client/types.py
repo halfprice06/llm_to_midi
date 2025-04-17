@@ -108,3 +108,4 @@ class SongMetadata(BaseModel):
     key_signature: str
     time_signature: str
     instruments: "Instrumentation"
+

@@ -16,6 +16,7 @@
 import baml_py
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
+from typing_extensions import TypeAlias
 from typing import Dict, Generic, List, Optional, TypeVar, Union, Literal
 
 from . import types
@@ -102,3 +103,4 @@ class SongMetadata(BaseModel):
     key_signature: Optional[str] = None
     time_signature: Optional[str] = None
     instruments: Optional["Instrumentation"] = None
+

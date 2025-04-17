@@ -48,13 +48,35 @@ client<llm> OpenAIo3Mini {
   }
 }
 
+client<llm> OpenAIo4Mini {
+  provider openai
+  retry_policy Exponential
+
+  options {
+    reasoning_effort "medium"
+    model "o4-mini"
+    api_key env.OPENAI_API_KEY
+  }
+}
+
+client<llm> OpenAIo3 {
+  provider openai
+  retry_policy Exponential
+
+  options {
+    reasoning_effort "medium"
+    model "o3"
+    api_key env.OPENAI_API_KEY
+  }
+}
+
 client<llm> OpenAIGPT4o {
   provider openai
   retry_policy Exponential
 
   options {
     temperature 1
-    model "gpt-4o"
+    model "gpt-4o-latest"
     api_key env.OPENAI_API_KEY
 
   }
