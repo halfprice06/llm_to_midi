@@ -21,7 +21,7 @@ Uses BAML with various LLM models for generation.
 The model can be specified via command-line argument.
 
 Requires:
-    pip install pydantic MIDIUtil baml-client python-dotenv music21
+    pip install pydantic MIDIUtil baml-py python-dotenv music21
     LilyPond installed and in PATH for sheet music generation
 """
 import dotenv
