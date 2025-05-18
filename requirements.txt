@@ -3,4 +3,5 @@ openai
 pydantic
 MIDIUtil
 baml-py
-dotenv
+python-dotenv
+music21
